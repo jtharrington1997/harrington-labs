@@ -1,72 +1,47 @@
 # harrington-labs
 
-Photonics lab environment simulators and laser-material interaction platform. Consolidates six lab simulators with the former `harrington-lmi` dissertation platform into one unified photonics application.
+Photonics lab simulators and laser-material interaction (LMI) dissertation platform. All physics engines are JIT-accelerated via `harrington_common.compute` — automatic CUDA GPU → Numba CPU → NumPy fallback.
 
-**Port 8505** · Streamlit + harrington-common
+## Lab Simulators (Pages 1–6)
 
-## Lab Environment Simulators
+| Lab | Physics Engines | JIT Status |
+|-----|----------------|------------|
+| Direct Diode | L-I curves, thermal rollover, wavelength drift, far-field, spectral beam combining | ✓ Compute import |
+| Fiber Laser | Gain modeling, pump/signal evolution, SBS/SRS/SPM thresholds, V-number, thermal | ✓ `_fiber_propagation_kernel` |
+| Beam Control | Atmospheric propagation, Fried parameter, Rytov scintillation, AO Strehl | ✓ `_turbulence_broadening_kernel` |
+| Pulsed Laser | Ultrafast profiles, autocorrelation, GDD dispersion, open-aperture z-scan | ✓ Compute import |
+| Quantum Dots | Brus equation, PL/absorption spectra, exciton dynamics, temperature dependence | ✓ `_brus_vectorized` |
+| Coatings | Transfer matrix, spectral/angular reflectance, E-field, GDD, custom stacks | ✓ `parallel_map` spectral sweep |
 
-| Page | Lab | Physics |
-|------|-----|---------|
-| 1 | Direct Diode | L-I curves, thermal rollover, wavelength drift, far-field patterns, spectral beam combining |
-| 2 | Fiber Laser | Gain modeling, pump/signal evolution, SBS/SRS/SPM thresholds, thermal limits, V-number |
-| 3 | Beam Control | Atmospheric propagation, Fried parameter, Rytov scintillation, beam wander, AO Strehl |
-| 4 | Pulsed Laser | Ultrafast temporal/spectral profiles, autocorrelation, GDD dispersion, open-aperture z-scan |
-| 5 | Quantum Dots | Brus equation, PL/absorption spectra, exciton dynamics, temperature-dependent emission |
-| 6 | Coatings | Transfer matrix method, spectral/angular reflectance, E-field profiles, GDD, custom stacks |
+## LMI Platform (Pages 7–10)
 
-## Laser-Material Interaction Platform (merged from harrington-lmi)
+Merged from harrington-lmi. Sellmeier dispersion for 10 materials (Si, Ge, GaAs, SiO₂, BK7, LiNbO₃, KTP, Sapphire, ZnSe, CaF₂).
 
-| Page | Module | Function |
-|------|--------|----------|
-| 7 | Laser Library | Commercial lasers, custom sources, OPA chaining, spatial beam modes (TEM00, Top-Hat, HG, LG, Bessel) |
-| 8 | Material Database | Sellmeier dispersion for Si, Ge, GaAs, SiO2, BK7, LiNbO3, KTP, Sapphire, ZnSe, CaF2. Optical/thermal/mechanical properties |
-| 9 | Modeling & Simulation | Beam propagation through finite-thickness slabs, nonlinear absorption, Kerr/self-focusing, z-scan, thermal analysis, campaign comparison |
-| 10 | Source Builder | Gain medium, pump source, resonator, output coupler design |
+**JIT-accelerated simulation engines** (`src/harrington_labs/lmi/simulation/`):
+- **beam_propagation** — `_gaussian_w_z`, `_material_propagation_loop` kernels; z-scan uses `parallel_map` for >50 positions
+- **nonlinear** — `_nonlinear_propagation` kernel (MPA + Kerr depth-resolved)
+- **thermal** — `_thermal_accumulation` O(N²) kernel, `_euler_two_temp` kernel
 
-Legacy pages (30–80) preserve transitional compatibility surfaces from the original LMI migration.
+**Dissertation target**: sapphire 2100 nm / 5 mm open-aperture z-scan validation.
 
-## Package Structure
+## Pages
 
-```
-src/harrington_labs/
-├── domain/           Lab simulator data structures (BeamParams, PulsedSource, QD, coatings, etc.)
-├── simulation/       Lab simulator physics engines (6 modules, no Streamlit imports)
-├── ui/               Lab-specific display helpers, plot conventions
-└── lmi/              Laser-material interaction platform (merged from harrington-lmi)
-    ├── domain/       Lasers, materials, Sellmeier, interactions, plot specs, units
-    ├── simulation/   Beam propagation, nonlinear optics, thermal, custom models
-    ├── io/           Gnuplot export, campaign import, CSV/JSON exporters
-    └── ui/           LMI-specific formatting, branding, access control
-```
+- 1–6: Lab simulators
+- 7: Laser Library
+- 8: Material Database
+- 9: Modeling & Simulation
+- 10: Source Builder
+- 30–80: Legacy pages (migration continuity)
+- 90: Admin (API keys, data management, **Compute backend status**)
 
-## Dissertation Alignment
-
-The LMI platform supports dissertation-quality supplemental modeling:
-
-1. **Sapphire SCG / k–ω benchmarking** — through-focus slab propagation, B-integral, self-focusing susceptibility
-2. **MIR ablation support** — fluence at focus, threshold/incubation, campaign comparison against morphology
-3. **Platform claim** — demonstrates a reusable research software platform, not a one-off calculator
-
-Primary validation dataset: 2100 nm pump, ~30 µJ, 1 kHz, ~170 fs, 5 mm sapphire window.
-
-## Running
+## Installation
 
 ```bash
-source ~/harrington/activate.sh
-cd ~/harrington/harrington-labs
-streamlit run app/streamlit_app.py
+# Base (includes numba + joblib)
+uv sync
+
+# With CUDA GPU
+pip install "harrington-labs[cuda]"
 ```
 
-## TODO
-
-- [ ] Finalize beam propagation kernel validation against sapphire z-scan data
-- [ ] Add experiment overlay support for simulation vs measured comparison
-- [ ] Build sapphire validation workflow with exportable figures
-- [ ] Add sensitivity/uncertainty sweeps for key parameters
-- [ ] Extract remaining page-local scientific logic into simulation/ and services/
-- [ ] Add regression tests for beam propagation and nonlinear kernels
-- [ ] Connect lab simulators to LMI material database (shared Sellmeier models)
-- [ ] Add fiber laser amplifier chain modeling (seed → preamp → power amp)
-- [ ] Add coating LIDT estimation based on E-field profiles
-- [ ] Add atmospheric turbulence phase screen generation for beam control lab
+Port: **8505**
