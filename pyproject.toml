@@ -27,7 +27,7 @@ dev = ["pytest", "ruff"]
 where = ["src"]
 
 [tool.uv.sources]
-harrington-common = { path = "../harrington-common", editable = true }
+harrington-common = { workspace = true }
 
 [dependency-groups]
 dev = ["pytest", "ruff"]
