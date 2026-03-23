@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "harrington-labs"
+version = "0.1.0"
+description = "Lab environment simulators for photonics research workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Joey Harrington" },
+]
+dependencies = [
+    "streamlit>=1.30.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "plotly>=5.18.0",
+    "pandas>=2.0.0",
+    "harrington-common",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv.sources]
+harrington-common = { path = "../harrington-common", editable = true }
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
