@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from harrington_common.compute import jit, parallel_map
+
 from harrington_labs.domain import (
     PulsedSource, PulseShape, SimulationResult,
     C_M_S, H_J_S,

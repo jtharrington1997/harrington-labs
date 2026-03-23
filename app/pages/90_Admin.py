@@ -4,6 +4,7 @@ API keys, data management, and system settings.
 """
 import json
 import streamlit as st
+from harrington_common.compute import render_compute_info, backend_info
 from harrington_labs.ui import render_header
 from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.access import require_admin, set_admin_password, admin_logout
@@ -21,7 +22,7 @@ with st.sidebar:
         admin_logout()
         st.rerun()
 
-tab_api, tab_data, tab_password = st.tabs(["API Keys", "Data Management", "Change Password"])
+tab_api, tab_data, tab_compute, tab_password = st.tabs(["API Keys", "Data Management", "Compute", "Change Password"])
 
 # ── API Keys ──
 with tab_api:
@@ -86,6 +87,29 @@ with tab_data:
                 save_custom_materials([])
                 st.success("Custom materials cleared.")
                 st.rerun()
+
+
+# ── Compute Backend ──
+with tab_compute:
+    with lab_panel():
+        st.subheader("Compute Backend")
+        info = backend_info()
+        backend = info["backend"]
+
+        if backend == "cupy":
+            st.success(f"🚀 GPU Accelerated — {info.get('gpu_name', 'CUDA GPU')}")
+            col1, col2 = st.columns(2)
+            col1.metric("CuPy Version", info.get("cupy_version", "?"))
+            col2.metric("GPU VRAM", f"{info.get('gpu_memory_mb', 0):.0f} MB")
+        elif backend == "numba":
+            st.info(f"⚡ Numba JIT — {info.get('numba_num_threads', '?')} CPU threads")
+            st.metric("Numba Version", info.get("numba_version", "?"))
+        else:
+            st.warning("🐢 NumPy fallback — install `numba` for 10-100× speedup on physics engines")
+
+        st.metric("NumPy Version", info["numpy_version"])
+        st.caption("Set `HARRINGTON_NO_JIT=1` to force NumPy fallback, "
+                   "`HARRINGTON_NO_CUDA=1` to disable GPU.")
 
 # ── Change Password ──
 with tab_password:

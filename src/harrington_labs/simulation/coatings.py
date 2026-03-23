@@ -10,6 +10,8 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from harrington_common.compute import jit, parallel_map
+
 from harrington_labs.domain import (
     CoatingDesign, ThinFilmLayer, CoatingType, SubstrateType,
     SimulationResult, C_M_S,
@@ -146,16 +148,29 @@ def spectral_response(
     T = np.zeros(n_points)
     phase = np.zeros(n_points)
 
-    for i, lam in enumerate(wavelengths):
+    def _compute_single_wl(lam):
         if polarization == "avg":
             rs, ts, rc_s = transfer_matrix_stack(design, lam, "s")
             rp, tp, rc_p = transfer_matrix_stack(design, lam, "p")
-            R[i] = (rs + rp) / 2
-            T[i] = (ts + tp) / 2
-            phase[i] = (np.angle(rc_s) + np.angle(rc_p)) / 2
+            return ((rs + rp) / 2, (ts + tp) / 2,
+                    (np.angle(rc_s) + np.angle(rc_p)) / 2)
         else:
-            R[i], T[i], rc = transfer_matrix_stack(design, lam, polarization)
-            phase[i] = np.angle(rc)
+            r, t, rc = transfer_matrix_stack(design, lam, polarization)
+            return (r, t, np.angle(rc))
+
+    # Parallel sweep over wavelengths (auto-selects best backend)
+    if n_points > 100:
+        results = parallel_map(
+            _compute_single_wl, list(wavelengths),
+            backend="auto", use_processes=False,
+        )
+    else:
+        results = [_compute_single_wl(lam) for lam in wavelengths]
+
+    for i, (r, t, ph) in enumerate(results):
+        R[i] = r
+        T[i] = t
+        phase[i] = ph
 
     return {
         "wavelength_nm": wavelengths,

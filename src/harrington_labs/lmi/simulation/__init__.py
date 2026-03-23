@@ -1,5 +1,8 @@
-"""Simulation modules for laser-material interaction.
+"""LMI simulation engines — beam propagation, nonlinear optics, thermal.
 
-Provides beam propagation, thermal modeling, and nonlinear optics.
+All engines use harrington_common.compute for automatic acceleration:
+    CUDA GPU → Numba JIT → NumPy (portable fallback)
 """
-from __future__ import annotations
+from .beam_propagation import *  # noqa: F401,F403
+from .nonlinear import *  # noqa: F401,F403
+from .thermal import *  # noqa: F401,F403

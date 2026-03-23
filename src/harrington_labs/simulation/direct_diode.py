@@ -10,6 +10,8 @@ import math
 import numpy as np
 from dataclasses import dataclass, field
 
+from harrington_common.compute import jit, parallel_map
+
 from harrington_labs.domain import (
     DiodeLaserParams, BeamParams, BeamProfile, SimulationResult,
     C_M_S, H_J_S, K_B,

@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from harrington_common.compute import jit, parallel_map
+
 from harrington_labs.domain import (
     BeamParams, PropagationPath, AdaptiveOpticsParams,
     AtmosphericCondition, SimulationResult, C_M_S,
@@ -176,20 +178,10 @@ def propagation_profile(
     w_vac = w0 * np.sqrt(1 + (z / z_r) ** 2)
 
     # Turbulence broadening accumulates
-    w_turb = np.zeros_like(z)
-    r0_local = np.zeros_like(z)
-    for i, zi in enumerate(z):
-        if zi > 0:
-            r0_i = fried_parameter_m(beam.wavelength_nm, cn2, zi)
-            r0_local[i] = r0_i
-            d = 2 * w0
-            if r0_i > 0 and r0_i < float("inf"):
-                w_turb[i] = w_vac[i] * math.sqrt(1 + (d / r0_i) ** (5.0 / 3.0))
-            else:
-                w_turb[i] = w_vac[i]
-        else:
-            w_turb[i] = w0
-            r0_local[i] = float("inf")
+    # JIT-accelerated turbulence broadening
+    w_turb, r0_local = _turbulence_broadening_kernel(
+        z, w_vac, w0, beam.wavelength_nm, cn2,
+    )
 
     # Transmission along path
     vis = path.visibility_km or _CONDITION_VISIBILITY_KM.get(path.condition, 23.0)

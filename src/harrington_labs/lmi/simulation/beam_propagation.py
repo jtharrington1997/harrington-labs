@@ -8,6 +8,9 @@ irradiance for ultrafast pulse interactions.
 This version also adds a z-scan-friendly material propagation model that
 recomputes local beam radius and peak irradiance through the slab, and
 supports optional nonlinear absorption / Kerr diagnostics.
+
+Accelerated via harrington_common.compute:
+    CUDA GPU → Numba JIT → NumPy (automatic fallback)
 """
 
 from __future__ import annotations
@@ -16,6 +19,11 @@ import math
 from dataclasses import dataclass
 
 import numpy as np
+
+from harrington_common.compute import (
+    jit, parallel_map, to_host,
+    _gaussian_w_z, _material_propagation_loop,
+)
 
 
 # ── Small helpers ──────────────────────────────────────────────────────────────
@@ -31,17 +39,44 @@ def beam_radius_at_z(
     z_from_focus_m: np.ndarray | float,
     n_medium: float = 1.0,
 ) -> np.ndarray | float:
-    """Gaussian beam radius at z, using medium-scaled Rayleigh range."""
-    z = np.asarray(z_from_focus_m)
-    z_r = focus.rayleigh_range_m * n_medium
-    return focus.w0_m * np.sqrt(1.0 + (z / z_r) ** 2)
+    """Gaussian beam radius at z, using medium-scaled Rayleigh range.
+
+    Uses JIT-accelerated kernel when available.
+    """
+    z = np.asarray(z_from_focus_m, dtype=np.float64)
+    if z.ndim == 0:
+        z = z.reshape(1)
+        result = _gaussian_w_z(focus.w0_m, focus.rayleigh_range_m, z, n_medium)
+        return float(result[0])
+    return _gaussian_w_z(focus.w0_m, focus.rayleigh_range_m, z, n_medium)
 
 
 # ── Transverse profile generators ─────────────────────────────────────────────
 
+@jit
+def _gaussian_profile_kernel(r, w0):
+    """TEM00 Gaussian — JIT kernel."""
+    n = len(r)
+    out = np.empty(n)
+    for i in range(n):
+        out[i] = math.exp(-2.0 * (r[i] / w0) ** 2)
+    return out
+
+
+@jit
+def _tophat_profile_kernel(r, w0, order):
+    """Super-Gaussian — JIT kernel."""
+    n = len(r)
+    out = np.empty(n)
+    exp = 2 * order
+    for i in range(n):
+        out[i] = math.exp(-2.0 * (r[i] / w0) ** exp)
+    return out
+
+
 def gaussian_profile(r: np.ndarray, w0: float) -> np.ndarray:
     """TEM00 Gaussian intensity profile I(r) / I_peak."""
-    return np.exp(-2.0 * (r / w0) ** 2)
+    return _gaussian_profile_kernel(np.asarray(r, dtype=np.float64), w0)
 
 
 def tophat_profile(
@@ -54,7 +89,7 @@ def tophat_profile(
     order=2 → standard Gaussian
     order≥10 → near flat-top
     """
-    return np.exp(-2.0 * (r / w0) ** (2 * order))
+    return _tophat_profile_kernel(np.asarray(r, dtype=np.float64), w0, order)
 
 
 def hermite_gaussian_profile(
@@ -235,7 +270,7 @@ class ZScanResult:
     self_focusing_ratio: np.ndarray
 
 
-# ── Focus model ───────────────────────────────────────────────────────────────
+# ── Focus model ───────────────────────────────────────────────────
 
 def compute_focus(
     beam: BeamParams,
@@ -260,8 +295,8 @@ def compute_focus(
     peak_irr = beam.peak_power_w / area_cm2 if area_cm2 > 0 else 0.0
     fluence = beam.pulse_energy_j / area_cm2 if area_cm2 > 0 else 0.0
 
-    z = np.linspace(-5.0 * z_r, 5.0 * z_r, 500)
-    w_z = w0 * np.sqrt(1.0 + (z / z_r) ** 2)
+    z = np.linspace(-5.0 * z_r, 5.0 * z_r, 500, dtype=np.float64)
+    w_z = _gaussian_w_z(w0, z_r, z, 1.0)
     area_z_cm2 = math.pi * (w_z * 100.0) ** 2
     irr_z = np.where(area_z_cm2 > 0, beam.peak_power_w / area_z_cm2, 0.0)
 
@@ -304,83 +339,38 @@ def propagate_in_material(
 ) -> PropagationInMaterial:
     """Propagate a focused beam through a material slab.
 
-    Parameters
-    ----------
-    focus
-        Focused beam parameters.
-    beam
-        Original beam parameters.
-    n_material
-        Refractive index of the material.
-    alpha_cm
-        Linear absorption coefficient in 1/cm.
-    thickness_m
-        Material thickness in meters.
-    surface_position_m
-        Position of the front surface relative to the focus.
-    beta_cm_per_w
-        Effective nonlinear absorption coefficient for
-        dI/dz = -alpha*I - beta*I^2 with I in W/cm^2 and z in cm.
-    n2_cm2_per_w
-        Kerr coefficient for B-integral / self-focusing diagnostics.
+    Uses JIT-accelerated kernels for the inner propagation loop.
     """
     n_points = 200
-    z_mat = np.linspace(0.0, thickness_m, n_points)
+    z_mat = np.linspace(0.0, thickness_m, n_points, dtype=np.float64)
     z_from_focus = surface_position_m + z_mat
 
-    w_z = beam_radius_at_z(focus, z_from_focus, n_material)
+    w_z = _gaussian_w_z(focus.w0_m, focus.rayleigh_range_m, z_from_focus, n_material)
     area_cm2 = beam_area_cm2(w_z)
 
-    irradiance_z = np.zeros_like(z_mat)
-    fluence_z = np.zeros_like(z_mat)
-    absorbed = np.zeros_like(z_mat)
-
-    peak_power_w = beam.peak_power_w
-    pulse_energy_j = beam.pulse_energy_j
-
-    for i in range(n_points):
-        area_i = float(area_cm2[i]) if np.ndim(area_cm2) > 0 else float(area_cm2)
-        if area_i <= 0:
-            continue
-
-        i_peak = peak_power_w / area_i if peak_power_w > 0 else 0.0
-        f_peak = pulse_energy_j / area_i if pulse_energy_j > 0 else 0.0
-
-        irradiance_z[i] = i_peak
-        fluence_z[i] = f_peak
-        absorbed[i] = (
-            1.0 - peak_power_w / beam.peak_power_w
-            if beam.peak_power_w > 0
-            else 0.0
-        )
-
-        if i == n_points - 1:
-            break
-
-        dz_cm = (z_mat[i + 1] - z_mat[i]) * 100.0
-
-        if alpha_cm > 0:
-            lin_factor = math.exp(-alpha_cm * dz_cm)
-            l_eff_cm = (1.0 - lin_factor) / alpha_cm
-        else:
-            lin_factor = 1.0
-            l_eff_cm = dz_cm
-
-        if beta_cm_per_w > 0 and i_peak > 0:
-            i_out = i_peak * lin_factor / (1.0 + beta_cm_per_w * i_peak * l_eff_cm)
-        else:
-            i_out = i_peak * lin_factor
-
-        step_factor = i_out / i_peak if i_peak > 0 else 1.0
-        peak_power_w *= step_factor
-        pulse_energy_j *= step_factor
+    # JIT-accelerated propagation loop
+    irradiance_z, fluence_z, final_power, final_energy = _material_propagation_loop(
+        n_points, z_mat,
+        np.asarray(area_cm2, dtype=np.float64),
+        beam.peak_power_w, beam.pulse_energy_j,
+        alpha_cm, beta_cm_per_w,
+    )
 
     transmission_fraction = (
-        peak_power_w / beam.peak_power_w
+        final_power / beam.peak_power_w
         if beam.peak_power_w > 0
         else 1.0
     )
     peak_irradiance = float(np.max(irradiance_z)) if irradiance_z.size else 0.0
+
+    # Absorbed fraction (relative to initial)
+    absorbed = np.zeros_like(z_mat)
+    if beam.peak_power_w > 0:
+        # Approximate from irradiance decay
+        area_0 = float(area_cm2[0]) if np.ndim(area_cm2) > 0 else float(area_cm2)
+        if area_0 > 0:
+            power_z = irradiance_z * area_cm2
+            absorbed = 1.0 - power_z / (irradiance_z[0] * area_0) if irradiance_z[0] > 0 else absorbed
 
     b_integral_rad = 0.0
     self_focusing_ratio = 0.0
@@ -391,7 +381,6 @@ def propagate_in_material(
             (2.0 * math.pi / beam.wavelength_m)
             * np.trapezoid(n2_m2_per_w * i_w_m2, z_mat)
         )
-
         p_crit_w = 0.148 * beam.wavelength_m**2 / (n_material * n2_m2_per_w)
         self_focusing_ratio = beam.peak_power_w / p_crit_w if p_crit_w > 0 else 0.0
 
@@ -409,6 +398,28 @@ def propagate_in_material(
     )
 
 
+def _propagate_single_position(args):
+    """Worker for parallel z-scan sweep."""
+    (z_center_m, focus, beam, n_material, alpha_cm,
+     thickness_m, beta_cm_per_w, n2_cm2_per_w) = args
+
+    surface_pos_m = z_center_m - 0.5 * thickness_m
+    prop = propagate_in_material(
+        focus=focus, beam=beam,
+        n_material=n_material, alpha_cm=alpha_cm,
+        thickness_m=thickness_m, surface_position_m=surface_pos_m,
+        beta_cm_per_w=beta_cm_per_w, n2_cm2_per_w=n2_cm2_per_w,
+    )
+    peak_idx = int(np.argmax(prop.irradiance_z_w_cm2))
+    return {
+        "peak_irr": prop.peak_irradiance_w_cm2,
+        "transmission": prop.transmission_fraction,
+        "b_integral": prop.b_integral_rad,
+        "sf_ratio": prop.self_focusing_ratio,
+        "peak_radius": prop.w_z_m[peak_idx],
+    }
+
+
 def simulate_open_aperture_zscan(
     focus: FocusResult,
     beam: BeamParams,
@@ -418,40 +429,37 @@ def simulate_open_aperture_zscan(
     z_positions_m: np.ndarray,
     beta_cm_per_w: float = 0.0,
     n2_cm2_per_w: float = 0.0,
+    parallel: bool = True,
 ) -> ZScanResult:
     """Simulate open-aperture z-scan.
 
-    Convention:
-    z_positions_m is the sample-center position relative to focus.
-    Therefore z = 0 means the sample center lies at the focal plane.
+    When parallel=True and len(z_positions) > 50, uses parallel_map
+    for multi-core acceleration of the parameter sweep.
     """
-    peak_irr = np.zeros_like(z_positions_m, dtype=float)
-    transmission = np.zeros_like(z_positions_m, dtype=float)
-    peak_radius_m = np.zeros_like(z_positions_m, dtype=float)
-    b_integral = np.zeros_like(z_positions_m, dtype=float)
-    sf_ratio = np.zeros_like(z_positions_m, dtype=float)
+    z_positions_m = np.asarray(z_positions_m, dtype=np.float64)
+    n_pos = len(z_positions_m)
 
-    for i, z_center_m in enumerate(z_positions_m):
-        surface_pos_m = z_center_m - 0.5 * thickness_m
+    # Build argument tuples
+    args_list = [
+        (float(z), focus, beam, n_material, alpha_cm,
+         thickness_m, beta_cm_per_w, n2_cm2_per_w)
+        for z in z_positions_m
+    ]
 
-        prop = propagate_in_material(
-            focus=focus,
-            beam=beam,
-            n_material=n_material,
-            alpha_cm=alpha_cm,
-            thickness_m=thickness_m,
-            surface_position_m=surface_pos_m,
-            beta_cm_per_w=beta_cm_per_w,
-            n2_cm2_per_w=n2_cm2_per_w,
+    # Use parallel sweep for large scans
+    if parallel and n_pos > 50:
+        results = parallel_map(
+            _propagate_single_position, args_list,
+            backend="auto",
         )
+    else:
+        results = [_propagate_single_position(a) for a in args_list]
 
-        peak_irr[i] = prop.peak_irradiance_w_cm2
-        transmission[i] = prop.transmission_fraction
-        b_integral[i] = prop.b_integral_rad
-        sf_ratio[i] = prop.self_focusing_ratio
-
-        peak_idx = int(np.argmax(prop.irradiance_z_w_cm2))
-        peak_radius_m[i] = prop.w_z_m[peak_idx]
+    peak_irr = np.array([r["peak_irr"] for r in results])
+    transmission = np.array([r["transmission"] for r in results])
+    b_integral = np.array([r["b_integral"] for r in results])
+    sf_ratio = np.array([r["sf_ratio"] for r in results])
+    peak_radius_m = np.array([r["peak_radius"] for r in results])
 
     return ZScanResult(
         z_positions_m=z_positions_m,

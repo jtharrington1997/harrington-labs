@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from harrington_common.compute import jit, parallel_map
+
 from harrington_labs.domain import (
     QuantumDotParams, QDMaterial, SimulationResult,
     C_M_S, H_J_S, K_B,
@@ -59,6 +61,34 @@ def brus_bandgap_ev(
     return max(eg, eg_bulk)
 
 
+
+@jit
+def _brus_vectorized(eg_bulk, me_ratio, mh_ratio, eps_r, diameters):
+    """Brus equation over diameter array — JIT-accelerated."""
+    _H_BAR = 1.0546e-34
+    _E_CHARGE = 1.602e-19
+    _M_E = 9.109e-31
+    _EPS_0 = 8.854e-12
+    _PI = 3.141592653589793
+
+    n = len(diameters)
+    bandgaps = np.empty(n)
+    me = me_ratio * _M_E
+    mh = mh_ratio * _M_E
+    mu = me * mh / (me + mh) if (me + mh) > 0.0 else _M_E
+
+    for i in range(n):
+        r = diameters[i] * 0.5e-9  # nm to m, radius
+        if r <= 0.0:
+            bandgaps[i] = eg_bulk
+            continue
+        kinetic = (_H_BAR ** 2 * _PI ** 2) / (2.0 * mu * r ** 2)
+        coulomb = 1.8 * _E_CHARGE ** 2 / (4.0 * _PI * _EPS_0 * eps_r * r)
+        eg = eg_bulk + kinetic / _E_CHARGE - coulomb / _E_CHARGE
+        bandgaps[i] = max(eg, eg_bulk)
+    return bandgaps
+
+
 def bandgap_vs_size(
     material: QDMaterial,
     diameter_range_nm: tuple[float, float] = (1.5, 12.0),
@@ -66,7 +96,12 @@ def bandgap_vs_size(
 ) -> dict:
     """Bandgap as function of QD diameter."""
     diameters = np.linspace(diameter_range_nm[0], diameter_range_nm[1], n_points)
-    bandgaps = np.array([brus_bandgap_ev(material, d) for d in diameters])
+    # Vectorized Brus equation (JIT-accelerated inner kernel)
+    bandgaps = _brus_vectorized(
+        material.bulk_bandgap_ev, material.electron_mass_ratio,
+        material.hole_mass_ratio, material.dielectric_constant,
+        np.asarray(diameters, dtype=np.float64),
+    )
     wavelengths = 1240.0 / bandgaps  # nm
     return {
         "diameter_nm": diameters,

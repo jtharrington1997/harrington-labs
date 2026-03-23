@@ -9,6 +9,8 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from harrington_common.compute import jit, parallel_map
+
 from harrington_labs.domain import (
     FiberLaserParams, FiberType, SimulationResult,
     C_M_S, H_J_S, K_B,
@@ -188,6 +190,32 @@ def fiber_thermal_estimate(
 
 # ── Gain-along-fiber profile ────────────────────────────────────
 
+
+@jit
+def _fiber_propagation_kernel(
+    n_steps, dz, alpha_p_neper, clad_area,
+    n_ions, sigma_e, sigma_a, bg_loss, qe, max_signal,
+    pump_init, signal_init,
+):
+    """Pump/signal co-propagation — JIT-accelerated."""
+    pump = np.zeros(n_steps)
+    signal = np.zeros(n_steps)
+    pump[0] = pump_init
+    signal[0] = signal_init
+
+    for i in range(1, n_steps):
+        pump[i] = pump[i - 1] * math.exp(-alpha_p_neper * dz)
+        local_pump_intensity = pump[i] / clad_area
+        inversion = min(0.95, 0.4 + 0.3 * (local_pump_intensity / 1e4))
+        g = n_ions * (inversion * sigma_e - (1.0 - inversion) * sigma_a) * 1e-2
+        net_g = g - bg_loss
+        signal[i] = signal[i - 1] * math.exp(net_g * dz)
+        if signal[i] > max_signal:
+            signal[i] = max_signal
+
+    return pump, signal
+
+
 def gain_profile(
     params: FiberLaserParams,
     n_steps: int = 200,
@@ -210,23 +238,15 @@ def gain_profile(
     n_ions = params.doping_concentration_ppm * 1e-6 * 2.2e22
     qe = params.pump_wavelength_nm / params.signal_wavelength_nm
 
-    for i in range(1, n_steps):
-        # Pump absorption
-        pump[i] = pump[i-1] * math.exp(-alpha_p_neper * dz)
+    bg_loss = params.background_loss_db_m / 4.343
+    clad_area = math.pi * (params.cladding_diameter_um / 2 * 1e-4) ** 2
+    max_signal = params.pump_power_w * qe
 
-        # Local inversion estimate
-        local_pump_intensity = pump[i] / (math.pi * (params.cladding_diameter_um/2 * 1e-4)**2)
-        inversion = min(0.95, 0.4 + 0.3 * (local_pump_intensity / 1e4))
-
-        g = n_ions * (inversion * sigma_e - (1 - inversion) * sigma_a) * 1e-2  # m⁻¹
-        bg_loss = params.background_loss_db_m / 4.343
-        net_g = g - bg_loss
-
-        signal[i] = signal[i-1] * math.exp(net_g * dz)
-        # Gain saturation clamp
-        max_local = pump[i] * qe * 0.95
-        if signal[i] > params.pump_power_w * qe:
-            signal[i] = params.pump_power_w * qe
+    pump, signal = _fiber_propagation_kernel(
+        n_steps, dz, alpha_p_neper, clad_area,
+        n_ions, sigma_e, sigma_a, bg_loss, qe, max_signal,
+        params.pump_power_w, params.signal_seed_power_w,
+    )
 
     return {"z_m": z, "pump_w": pump, "signal_w": signal}
 
