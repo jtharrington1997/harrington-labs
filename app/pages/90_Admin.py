@@ -4,14 +4,14 @@ API keys, data management, and system settings.
 """
 import json
 import streamlit as st
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.access import require_admin, set_admin_password, admin_logout
 from harrington_labs.lmi.domain.lasers import load_custom_lasers, save_custom_lasers, LASER_DB_PATH
 from harrington_labs.lmi.domain.materials import load_custom_materials, save_custom_materials, MATERIAL_DB_PATH
 
 st.set_page_config(page_title="Admin", layout="wide")
-render_header()
+render_header("Admin", "System settings • API keys • Custom data management")
 
 if not require_admin():
     st.stop()
@@ -25,7 +25,7 @@ tab_api, tab_data, tab_password = st.tabs(["API Keys", "Data Management", "Chang
 
 # ── API Keys ──
 with tab_api:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("API Keys")
         st.caption("Keys are stored in data/manual/config.json.")
 
@@ -54,7 +54,7 @@ with tab_api:
 
 # ── Data Management ──
 with tab_data:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Custom Data")
 
         custom_lasers = load_custom_lasers()
@@ -89,7 +89,7 @@ with tab_data:
 
 # ── Change Password ──
 with tab_password:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Change Admin Password")
         old_pw = st.text_input("Current password", type="password", key="old_pw")
         new_pw = st.text_input("New password", type="password", key="new_pw")

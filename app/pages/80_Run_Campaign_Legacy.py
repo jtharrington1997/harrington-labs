@@ -22,8 +22,8 @@ import plotly.express as px
 import streamlit as st
 
 from harrington_labs.lmi.io.run_campaign_api import run_campaign_blocking
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_frequency_hz,
     fmt_power_w,
@@ -122,13 +122,13 @@ def _apply_pub_layout(fig, *, height: int = 420, showlegend: bool = True) -> Non
 st.set_page_config(page_title="Run Campaign Legacy", layout="wide")
 render_header()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Run Campaign Legacy")
     st.caption(
         "Legacy execution page for campaign payloads and saved result inspection."
     )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Workflow Handoff")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -140,7 +140,7 @@ with lmi_panel():
     with c4:
         st.link_button("Open Digital Twin Legacy", "/Digital_Twin_Legacy", width="stretch")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Campaign Configuration")
 
     c1, c2, c3 = st.columns(3)
@@ -260,7 +260,7 @@ with lmi_panel():
             width="stretch",
         )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Applied Beam Summary")
     avg_power_w = (pulse_energy_uj * 1e-6) * (rep_rate_khz * 1e3)
     c1, c2, c3, c4 = st.columns(4)
@@ -270,29 +270,29 @@ with lmi_panel():
     c4.metric("ρ points", str(len(rho_values)))
 
 if run_clicked:
-    with lmi_panel():
+    with lab_panel():
         with st.spinner("Running campaign..."):
             run_campaign_blocking(campaign_payload)
         st.success("Campaign completed.")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Result Directory")
     st.code(str(RESULT_DIR), language="text")
 
 df = _load_results(RESULT_DIR)
 
 if df is None:
-    with lmi_panel():
+    with lab_panel():
         st.info("No JSON results found yet in the configured result directory.")
     st.stop()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Loaded Results")
     st.dataframe(df, width="stretch", hide_index=True)
 
 numeric_cols = set(df.select_dtypes(include=["number"]).columns)
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Quick Plots")
 
     if {"rho_ohm_cm", "alpha_cm"}.issubset(numeric_cols):

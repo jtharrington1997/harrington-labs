@@ -22,8 +22,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_absorption_cm_inv,
     fmt_ev,
@@ -338,7 +338,7 @@ fluence = pulse_energy_j / area_cm2 if area_cm2 > 0 else 0.0
 
 st.subheader(f"Digital Twin Legacy — {fmt_wavelength_nm(wavelength_nm)}")
 
-with lmi_panel():
+with lab_panel():
     back_params = {
         "laser": _qp_str(qp, "laser", ""),
         "material": mat_name,
@@ -367,7 +367,7 @@ with lmi_panel():
 if pol_type != "Linear" or pol_angle != 0:
     st.info(f"Polarization: {pol_type} — n₂ correction {pol_factor:.4g}×")
 
-with lmi_panel():
+with lab_panel():
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Peak Power", fmt_power_w(beam.peak_power_w))
     c2.metric("Avg Power", fmt_power_w(beam.avg_power_w))
@@ -396,7 +396,7 @@ tab_beam, tab_thermal, tab_nonlinear, tab_absorption = st.tabs(
 )
 
 with tab_beam:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Focused Beam Profile")
         col1, col2, col3 = st.columns(3)
         col1.metric("Calculated w₀", fmt_length_m(focus.w0_m))
@@ -404,7 +404,7 @@ with tab_beam:
         col3.metric("f/#", f"{focus.f_number:.4g}")
 
     if focus.r_m is not None and focus.intensity_r is not None:
-        with lmi_panel():
+        with lab_panel():
             st.subheader(f"Transverse Profile — {spatial_mode}")
             fig_mode = go.Figure()
             fig_mode.add_trace(
@@ -435,7 +435,7 @@ with tab_beam:
             _apply_pub_layout(fig_mode, height=320, showlegend=True)
             st.plotly_chart(fig_mode, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         fig = go.Figure()
         z_mm = focus.z_m * 1e3
         w_um = focus.w_z_m * 1e6
@@ -453,7 +453,7 @@ with tab_beam:
         _apply_pub_layout(fig, height=400, showlegend=True)
         st.plotly_chart(fig, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Propagation Through Sample")
         prop = _propagate_material(
             focus=focus,
@@ -493,7 +493,7 @@ with tab_thermal:
         n_pulses_max=500,
     )
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Single-Pulse Thermal Response")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Surface ΔT", fmt_temp_k(therm.delta_t_surface_k))
@@ -508,7 +508,7 @@ with tab_thermal:
         _apply_pub_layout(fig_t, height=360, showlegend=False)
         st.plotly_chart(fig_t, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Multi-Pulse Accumulation")
         fig_acc = go.Figure()
         fig_acc.add_trace(go.Scatter(x=therm.n_pulses, y=therm.t_surface_vs_pulses, mode="lines", line=dict(width=2), name="Surface temperature"))
@@ -519,7 +519,7 @@ with tab_thermal:
         st.plotly_chart(fig_acc, width="stretch")
 
     if material.electron_phonon_coupling_w_m3k > 0:
-        with lmi_panel():
+        with lab_panel():
             st.subheader("Two-Temperature Model")
             ttm = two_temperature_model(
                 fluence_j_cm2=fluence,
@@ -558,7 +558,7 @@ with tab_nonlinear:
         thickness_m=thickness_m,
     )
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Multiphoton Absorption")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("MPA Order", f"{nl.mpa.photon_order}-photon")
@@ -566,7 +566,7 @@ with tab_nonlinear:
         c3.metric("MPA Absorption Depth", fmt_length_m(nl.mpa.mpa_absorption_depth_m) if nl.mpa.mpa_absorption_depth_m < 1.0 else "> 1 m")
         c4.metric("Energy Absorbed", f"{nl.mpa.energy_deposited_fraction * 100:.4g}%")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Self-Focusing / Kerr Effect")
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("P / Pcritical", f"{nl.self_focusing.p_over_pcr:.4g}")
@@ -577,7 +577,7 @@ with tab_nonlinear:
         c5.metric("Peak Δn (Kerr)", fmt_refractive_index(nl.self_focusing.delta_n_peak))
         c6.metric("n₂", fmt_n2_cm2_w(n2_mat))
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Depth-Resolved Nonlinear Effects")
         fig_nl = make_subplots(rows=1, cols=2, subplot_titles=["Irradiance (with NL absorption)", "Kerr Δn(z)"])
         z_um = nl.z_m * 1e6
@@ -591,7 +591,7 @@ with tab_nonlinear:
         st.plotly_chart(fig_nl, width="stretch")
 
 with tab_absorption:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Combined Absorption Profile")
         prop = _propagate_material(
             focus=focus,
@@ -636,7 +636,7 @@ with tab_absorption:
         _apply_pub_layout(fig_abs, height=620, showlegend=False)
         st.plotly_chart(fig_abs, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Summary")
         summary_items = [
             f"Wavelength: {fmt_wavelength_nm(wavelength_nm)} ({fmt_ev(photon_ev)}/photon)",

@@ -33,8 +33,8 @@ from harrington_labs.lmi.simulation.beam_propagation import (
     compute_focus,
     propagate_in_material,
 )
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_absorption_cm_inv,
     fmt_fluence_j_cm2,
@@ -230,7 +230,7 @@ render_header()
 
 qp = st.query_params
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Simulation Legacy")
     st.caption(
         "Campaign import and experiment-vs-simulation overlay. "
@@ -240,7 +240,7 @@ with lmi_panel():
 uploaded = st.file_uploader("Upload Excel campaign (.xlsx)", type=["xlsx"])
 
 if uploaded is None:
-    with lmi_panel():
+    with lab_panel():
         st.info("Upload a campaign spreadsheet to begin.")
     st.stop()
 
@@ -250,13 +250,13 @@ tmp.close()
 
 xls = pd.ExcelFile(tmp.name)
 
-with lmi_panel():
+with lab_panel():
     sheet = st.selectbox("Select sheet", xls.sheet_names)
 
 materials_from_sheet = parse_sheet(tmp.name, sheet)
 
 if not materials_from_sheet:
-    with lmi_panel():
+    with lab_panel():
         st.warning("No materials detected in the selected sheet.")
     st.stop()
 
@@ -271,7 +271,7 @@ material_names = [m.name for m in material_models]
 default_material_name = _qp_str(qp, "material", material_names[0])
 material_index = material_names.index(default_material_name) if default_material_name in material_names else 0
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Simulation Controls")
     c1, c2, c3, c4 = st.columns(4)
 
@@ -319,7 +319,7 @@ beta_cm_per_w = _material_beta_cm_per_w(material_model)
 focus = compute_focus(beam, focal_length_m=focal_length_mm * 1e-3, n_medium=1.0)
 thickness_m = thickness_mm * 1e-3
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Applied Source / Material State")
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("Laser", laser.name)
@@ -343,7 +343,7 @@ query_string = _pack_query_string(
     thickness_mm=thickness_mm,
 )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Workflow Handoff")
     h1, h2 = st.columns(2)
     with h1:
@@ -359,7 +359,7 @@ with lmi_panel():
             width="stretch",
         )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Experimental vs Simulation Overlay")
 
     fig = go.Figure()
@@ -412,7 +412,7 @@ with lmi_panel():
     _apply_pub_layout(fig, height=560, showlegend=True)
     st.plotly_chart(fig, width="stretch")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Slab Preview at z = 0 mm")
 
     prop0 = _propagate_material(

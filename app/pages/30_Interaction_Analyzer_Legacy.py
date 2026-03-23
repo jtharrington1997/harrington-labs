@@ -27,8 +27,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_absorption_cm_inv,
     fmt_ev,
@@ -404,14 +404,14 @@ qp = st.query_params
 lasers = all_lasers()
 materials = all_materials()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Legacy Interaction Analyzer")
     st.caption(
         "Decision-and-handoff layer while workflows are migrated into the unified "
         "Modeling & Simulation workspace."
     )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Select Laser & Material")
     sel_col1, sel_col2 = st.columns(2)
 
@@ -547,7 +547,7 @@ with st.expander("Override laser parameters for this analysis"):
 
         st.rerun()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Polarization")
     pcol1, pcol2, pcol3 = st.columns(3)
 
@@ -608,7 +608,7 @@ with lmi_panel():
         st.metric("Label", pol_label)
         st.metric("n₂ correction", f"{pol_factor:.4g}×")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Sample & Focusing")
     geom_col1, geom_col2, geom_col3 = st.columns(3)
 
@@ -704,7 +704,7 @@ query_string = _pack_query_params(
     pol_ellipticity=pol_ellipticity,
 )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Workflow Handoff")
     hcol1, hcol2, hcol3, hcol4, hcol5 = st.columns(5)
 
@@ -719,7 +719,7 @@ with lmi_panel():
     with hcol5:
         st.link_button("Open Run Campaign Legacy", "/Run_Campaign_Legacy", width="stretch")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Interaction Summary")
 
     color = REGIME_COLORS.get(result.regime, "#8B949E")
@@ -777,7 +777,7 @@ with lmi_panel():
         for warning in result.warnings:
             st.warning(warning)
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Focused Beam & Slab Preview")
 
     pcol1, pcol2, pcol3, pcol4 = st.columns(4)
@@ -824,7 +824,7 @@ with lmi_panel():
 
     st.plotly_chart(fig_prop, width="stretch")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Open-Aperture Z-Scan Preview")
     st.caption(
         "z = 0 means the sample center is at the focal plane. "
@@ -945,7 +945,7 @@ with lmi_panel():
 
 custom_models = load_models()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Custom Physics Model Hooks")
 
     if not custom_models:

@@ -17,7 +17,7 @@ from harrington_labs.lmi.domain.lasers import (
     save_custom_lasers,
 )
 from harrington_labs.lmi.ui.access import is_admin
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_energy_j,
     fmt_fluence_j_cm2,
@@ -27,14 +27,14 @@ from harrington_labs.lmi.ui.formatting import (
     fmt_time_s,
     fmt_wavelength_nm,
 )
-from harrington_labs.lmi.ui.layout import render_header
+from harrington_labs.ui import render_header
 
 st.set_page_config(page_title="Laser Library", layout="wide")
-render_header()
+render_header("Laser Library", "Commercial lasers • Custom sources • OPA chaining • Spatial beam modes")
 
 lasers = all_lasers()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Laser Source Library")
 
     rows = []
@@ -58,9 +58,9 @@ with lmi_panel():
         )
 
     df = pd.DataFrame(rows)
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Laser Details")
     selected_name = st.selectbox("Select laser", [l.name for l in lasers])
     laser = next(l for l in lasers if l.name == selected_name)
@@ -93,7 +93,7 @@ with lmi_panel():
         st.caption(laser.notes)
 
 if is_admin():
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Add Custom Laser")
         with st.form("new_laser"):
             col1, col2 = st.columns(2)

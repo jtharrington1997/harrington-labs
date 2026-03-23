@@ -13,8 +13,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import streamlit as st
 
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_absorption_cm_inv,
     fmt_ev,
@@ -346,20 +346,20 @@ def _laser_override_defaults(base_laser) -> dict[str, float]:
 
 
 st.set_page_config(page_title="Modeling & Simulation", layout="wide")
-render_header()
+render_header("Modeling & Simulation", "Beam propagation • Nonlinear optics • z-Scan • Thermal analysis")
 
 qp = st.query_params
 lasers = all_lasers()
 materials = all_materials()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Modeling & Simulation")
     st.caption(
         "Unified workspace for interaction analysis, beam propagation, z-scan preview, "
         "thermal / nonlinear digital twin studies, campaign overlay, and export tools."
     )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Shared Source / Material State")
     c1, c2 = st.columns(2)
 
@@ -488,7 +488,7 @@ with st.expander("Override laser parameters for this workspace"):
 
         st.rerun()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Polarization / Focusing / Sample")
     g1, g2, g3 = st.columns(3)
 
@@ -594,7 +594,7 @@ if "delta_n" in result.metrics and pol_factor != 1.0:
     if "b_integral_per_cm" in result.metrics:
         result.metrics["b_integral_per_cm"] *= pol_factor
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Shared Summary")
     color = REGIME_COLORS.get(result.regime, "#8B949E")
     st.markdown(
@@ -639,7 +639,7 @@ tabs = st.tabs(
 )
 
 with tabs[0]:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Interaction Overview")
         if result.dominant_processes:
             st.markdown("**Dominant Processes**")
@@ -657,7 +657,7 @@ with tabs[0]:
         c3.metric("Transmission Through Slab", f"{100.0 * _transmission_fraction(prop):.4g}%")
 
 with tabs[1]:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Focused Beam & Slab Preview")
         fig_prop = make_subplots(
             rows=1,
@@ -683,7 +683,7 @@ with tabs[1]:
         _apply_pub_layout(fig_prop, height=420, showlegend=False)
         st.plotly_chart(fig_prop, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Open-Aperture Z-Scan Preview")
         zc1, zc2 = st.columns(2)
         with zc1:
@@ -766,7 +766,7 @@ with tabs[2]:
         n_pulses_max=500,
     )
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Thermal Summary")
         t1, t2, t3, t4 = st.columns(4)
         t1.metric("Surface ΔT", fmt_temp_k(therm.delta_t_surface_k))
@@ -790,7 +790,7 @@ with tabs[2]:
         _apply_pub_layout(fig_acc, height=360, showlegend=False)
         st.plotly_chart(fig_acc, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Nonlinear Summary")
         n1, n2, n3, n4 = st.columns(4)
         n1.metric("MPA Order", f"{nl.mpa.photon_order}-photon")
@@ -830,7 +830,7 @@ with tabs[2]:
             st.plotly_chart(fig_ttm, width="stretch")
 
 with tabs[3]:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Campaign Overlay")
         uploaded = st.file_uploader("Upload Excel campaign (.xlsx)", type=["xlsx"])
 
@@ -895,7 +895,7 @@ with tabs[3]:
                 st.plotly_chart(fig, width="stretch")
 
 with tabs[4]:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Plot Export")
         plot_spec = PlotSpec(
             title="z_scan_normalized_transmission",
@@ -916,7 +916,7 @@ with tabs[4]:
             files = export_plot_bundle(plot_spec, outdir, "z_scan_normalized_transmission")
             st.success("Exported: " + ", ".join(str(path) for path in files.values()))
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Custom Physics Hooks")
         custom_models = load_models()
 
@@ -987,7 +987,7 @@ with tabs[4]:
                     _apply_pub_layout(fig_custom, height=360, showlegend=True)
                     st.plotly_chart(fig_custom, width="stretch")
 
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Legacy Fallbacks")
         c1, c2, c3, c4 = st.columns(4)
         with c1:

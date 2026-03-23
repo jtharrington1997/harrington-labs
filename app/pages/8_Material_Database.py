@@ -9,8 +9,8 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 import pandas as pd
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.access import is_admin
 from harrington_labs.lmi.ui.formatting import (
     fmt_absorption_cm_inv,
@@ -29,7 +29,7 @@ from harrington_labs.lmi.domain.materials import (
 )
 
 st.set_page_config(page_title="Material Database", layout="wide")
-render_header()
+render_header("Material Database", "Optical • Thermal • Mechanical properties • Sellmeier dispersion")
 
 PLOT_TEMPLATE = "plotly_white"
 PLOT_BG = "rgba(0,0,0,0)"
@@ -37,7 +37,7 @@ PLOT_BG = "rgba(0,0,0,0)"
 materials = all_materials()
 categories = sorted(set(m.category for m in materials))
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Material Database")
     cat_filter = st.multiselect("Filter by category", categories, default=categories)
     filtered = [m for m in materials if m.category in cat_filter]
@@ -58,9 +58,9 @@ with lmi_panel():
         })
 
     df = pd.DataFrame(rows)
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Material Details")
     selected = st.selectbox("Select material", [m.name for m in filtered])
     mat = next(m for m in filtered if m.name == selected)
@@ -82,7 +82,7 @@ with lmi_panel():
     if mat.notes:
         st.caption(mat.notes)
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Wavelength-Dependent Properties")
 
     if mat.has_sellmeier:
@@ -150,7 +150,7 @@ with lmi_panel():
         )
 
 if is_admin():
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Add Custom Material")
         with st.form("new_material"):
             col1, col2 = st.columns(2)

@@ -11,8 +11,8 @@ import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
 
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 from harrington_labs.lmi.ui.formatting import (
     fmt_energy_j,
     fmt_frequency_hz,
@@ -21,7 +21,7 @@ from harrington_labs.lmi.ui.formatting import (
 )
 
 st.set_page_config(page_title="Source Builder", layout="wide")
-render_header()
+render_header("Source Builder", "Gain medium • Pump source • Resonator • Output coupler design")
 
 PLOT_KW = dict(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 
@@ -36,11 +36,11 @@ GAIN_MEDIA = {
     "Tm:YAG": {"wavelength_nm": 2013, "cross_section_cm2": 1.5e-21, "upper_lifetime_us": 10000, "saturation_fluence_j_cm2": 130, "bandwidth_nm": 40},
 }
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Laser Source Builder")
     st.caption("Build a first-pass resonator estimate with cleaner engineering units and mobile-friendly plots.")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("1. Gain Medium")
     medium_name = st.selectbox("Select gain medium", list(GAIN_MEDIA.keys()))
     medium = GAIN_MEDIA[medium_name]
@@ -57,7 +57,7 @@ with lmi_panel():
 """
     )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("2. Resonator")
     col1, col2 = st.columns(2)
     with col1:
@@ -78,7 +78,7 @@ with lmi_panel():
     c2.metric("Round-trip time", f"{rt_time_ns:.2f} ns")
     c3.metric("Estimated longitudinal modes", f"{est_modes:,}")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("3. Pump Source")
     col1, col2 = st.columns(2)
     with col1:
@@ -97,7 +97,7 @@ with lmi_panel():
     c2.metric("Absorbed pump", fmt_power_w(absorbed_pump))
     c3.metric("Quantum-limited output", fmt_power_w(quantum_limit_w))
 
-with lmi_panel():
+with lab_panel():
     st.subheader("4. Estimated Output")
 
     total_loss = -math.log(output_coupler_r) + internal_loss_pct
@@ -139,7 +139,7 @@ with lmi_panel():
     )
     st.plotly_chart(fig, width="stretch")
 
-with lmi_panel():
+with lab_panel():
     st.subheader("5. Quick Design Summary")
     summary = [
         f"Gain medium: {medium_name}",

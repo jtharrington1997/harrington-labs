@@ -25,8 +25,8 @@ from pathlib import Path
 
 import streamlit as st
 
-from harrington_labs.lmi.ui.layout import render_header
-from harrington_labs.lmi.ui.branding import lmi_panel
+from harrington_labs.ui import render_header
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
 
 
 def _apply_page_header() -> None:
@@ -191,14 +191,14 @@ _apply_page_header()
 
 gnuplot_bin = _detect_gnuplot()
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Gnuplot Legacy")
     st.caption(
         "Publication-oriented static plotting workspace for gnuplot scripts, "
         "uploaded data, and export-ready render checks."
     )
 
-with lmi_panel():
+with lab_panel():
     st.subheader("Workflow Handoff")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -211,7 +211,7 @@ with lmi_panel():
         st.link_button("Open Digital Twin Legacy", "/Digital_Twin_Legacy", width="stretch")
 
 if gnuplot_bin is None:
-    with lmi_panel():
+    with lab_panel():
         st.error(
             "gnuplot was not found on this system. Install it with "
             "`sudo apt install gnuplot` on Linux or `winget install gnuplot` on Windows, "
@@ -226,7 +226,7 @@ tab_disp, tab_beam, tab_custom, tab_upload = st.tabs(
 )
 
 with tab_disp:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Dispersion Curve Template")
         left, right = st.columns([1, 1])
 
@@ -269,7 +269,7 @@ with tab_disp:
                 st.info("Render the current script to preview the output.")
 
 with tab_beam:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Beam Profile Template")
         left, right = st.columns([1, 1])
 
@@ -312,7 +312,7 @@ with tab_beam:
                 st.info("Render the current script to preview the output.")
 
 with tab_custom:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Custom Script")
         left, right = st.columns([1, 1])
 
@@ -355,7 +355,7 @@ with tab_custom:
                 st.info("Render the current script to preview the output.")
 
 with tab_upload:
-    with lmi_panel():
+    with lab_panel():
         st.subheader("Plot from Uploaded Data")
         st.caption(
             "Upload a `.dat`, `.csv`, `.tsv`, or `.txt` file and write a gnuplot "
