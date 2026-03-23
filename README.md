@@ -1,8 +1,8 @@
 # harrington-labs
 
-Photonics lab environment simulators for the Harrington research software ecosystem.
+Photonics lab environment simulators and laser-material interaction platform for the Harrington research software ecosystem. Consolidates the former `harrington-lmi` dissertation platform with six lab simulators into one unified photonics application.
 
-## Labs
+## Lab Simulators
 
 | # | Lab | Physics |
 |---|-----|---------|
@@ -13,13 +13,21 @@ Photonics lab environment simulators for the Harrington research software ecosys
 | 5 | **Quantum Dots** | Brus equation (size-dependent bandgap), PL/absorption spectra, exciton dynamics, temperature-dependent emission |
 | 6 | **Coatings** | Transfer matrix method, spectral/angular reflectance, E-field distribution, GDD, preset & custom stacks |
 
+## Laser-Material Interaction Platform (from harrington-lmi)
+
+| # | Module | Function |
+|---|--------|----------|
+| 7 | **Laser Library** | Commercial lasers, custom sources, OPA chaining, spatial beam modes |
+| 8 | **Material Database** | Sellmeier dispersion, optical/thermal/mechanical properties |
+| 9 | **Modeling & Simulation** | Beam propagation, nonlinear optics, z-scan, thermal analysis, campaign comparison |
+| 10 | **Source Builder** | Gain medium, pump, resonator, output coupler design |
+
 ## Architecture
 
-Same ecosystem model as `harrington-lmi`, `automation-station`, and `pax-americana`:
-
 - **Streamlit + `harrington-common`** → GUI, Americana theme, layout
-- **`src/harrington_labs/simulation/`** → Pure physics engines (no Streamlit imports)
-- **`src/harrington_labs/domain/`** → Typed dataclasses, enums, physical constants
+- **`src/harrington_labs/simulation/`** → Lab simulator physics engines
+- **`src/harrington_labs/lmi/`** → LMI domain models, simulation kernels, IO/export (merged from harrington-lmi)
+- **`src/harrington_labs/domain/`** → Shared lab simulator data structures
 - **`src/harrington_labs/ui/`** → App-specific display helpers
 
 ## Running
@@ -30,10 +38,3 @@ pip install -e "../harrington-common"
 pip install -e .
 streamlit run app/streamlit_app.py
 ```
-
-## Conventions
-
-- Plotly charts: `plotly_white` template, transparent background, `width="stretch"`
-- `st.dataframe` uses `use_container_width=True`
-- Admin page is always the last numbered page
-- Physics engines never import Streamlit
