@@ -175,7 +175,7 @@ def absorption_spectrum(
     peak_1p = 0.6 * np.exp(-(energies - e_1p)**2 / (2 * (sigma_exc * 1.2)**2))
 
     # Continuum absorption above bandgap
-    continuum = np.where(energies > eg, ((energies - eg) / eg) ** 0.5, 0.0)
+    continuum = np.where(energies > eg, np.sqrt(np.maximum((energies - eg) / eg, 0.0)), 0.0)
     continuum = np.clip(continuum, 0, 3)
 
     # Combined
