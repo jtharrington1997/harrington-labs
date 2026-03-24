@@ -26,7 +26,7 @@ Each plugin must define:
 
 ``laser`` and ``material`` are plain dicts produced by
 ``dataclasses.asdict()`` so models have zero dependency on the
-harrington-lmi package.
+harrington-labs LMI subpackage.
 
 See ``data/custom_models/_example_fresnel.py`` for a working reference.
 """

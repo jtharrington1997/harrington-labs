@@ -28,7 +28,7 @@ def compute(
     """Fresnel reflection at the air-material interface.
 
     Parameters are plain dicts (dataclasses.asdict output) so this
-    module has *no dependency* on harrington-lmi internals.
+    module has *no dependency* on harrington-labs internals.
 
     Returns
     -------
