@@ -163,6 +163,39 @@ def long_term_beam_spread_m(
 
 # ── Propagation profile along path ──────────────────────────────
 
+@jit
+def _turbulence_broadening_kernel(z, w_vac, w0, wavelength_nm, cn2):
+    """Compute turbulence-broadened beam radius at each z step.
+
+    Uses Fried parameter r₀ evaluated at each propagation distance
+    and long-term beam spread model.  Returns (w_turb, r0_local) arrays.
+    """
+    lam = wavelength_nm * 1e-9
+    k = 2.0 * 3.141592653589793 / lam
+    n = len(z)
+    w_turb = np.empty(n)
+    r0_local = np.empty(n)
+    d_aperture = 2.0 * w0
+
+    for i in range(n):
+        zi = z[i]
+        if zi <= 0.0 or cn2 <= 0.0:
+            w_turb[i] = w_vac[i]
+            r0_local[i] = 1e30  # effectively infinite
+            continue
+        # Fried parameter at distance z_i
+        r0 = (0.423 * k**2 * cn2 * zi) ** (-3.0 / 5.0)
+        r0_local[i] = r0
+        # Long-term spread including beam wander
+        if r0 > 0.0 and r0 < 1e20:
+            ratio = (d_aperture / r0) ** (5.0 / 3.0)
+            w_turb[i] = w_vac[i] * math.sqrt(1.0 + ratio)
+        else:
+            w_turb[i] = w_vac[i]
+
+    return w_turb, r0_local
+
+
 def propagation_profile(
     beam: BeamParams,
     path: PropagationPath,
