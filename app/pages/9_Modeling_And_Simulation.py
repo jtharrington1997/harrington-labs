@@ -14,7 +14,7 @@ from plotly.subplots import make_subplots
 import streamlit as st
 
 from harrington_labs.ui import render_header
-from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS
+from harrington_labs.ui import lab_panel, make_figure, show_figure, COLORS, PLOT_LAYOUT
 from harrington_labs.lmi.ui.formatting import (
     fmt_absorption_cm_inv,
     fmt_ev,
@@ -261,8 +261,8 @@ def _apply_pub_layout(fig, *, height: int = 420, showlegend: bool = True) -> Non
     fig.update_layout(
         template="simple_white",
         height=height,
-        paper_bgcolor="white",
-        plot_bgcolor="white",
+        paper_bgcolor=PLOT_LAYOUT.get("paper_bgcolor", "rgba(0,0,0,0)"),
+        plot_bgcolor=PLOT_LAYOUT.get("plot_bgcolor", "rgba(0,0,0,0)"),
         font=dict(size=15),
         margin=dict(l=24, r=24, t=44, b=20),
         showlegend=showlegend,

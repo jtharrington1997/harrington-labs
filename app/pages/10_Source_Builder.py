@@ -23,7 +23,7 @@ from harrington_labs.lmi.ui.formatting import (
 st.set_page_config(page_title="Source Builder", layout="wide")
 render_header("Source Builder", "Gain medium • Pump source • Resonator • Output coupler design")
 
-PLOT_KW = dict(template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+from harrington_labs.ui import PLOT_LAYOUT as PLOT_KW
 
 GAIN_MEDIA = {
     "Nd:YAG": {"wavelength_nm": 1064, "cross_section_cm2": 2.8e-19, "upper_lifetime_us": 230, "saturation_fluence_j_cm2": 0.66, "bandwidth_nm": 0.45},

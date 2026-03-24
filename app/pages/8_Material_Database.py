@@ -31,8 +31,6 @@ from harrington_labs.lmi.domain.materials import (
 st.set_page_config(page_title="Material Database", layout="wide")
 render_header("Material Database", "Optical • Thermal • Mechanical properties • Sellmeier dispersion")
 
-PLOT_TEMPLATE = "plotly_white"
-PLOT_BG = "rgba(0,0,0,0)"
 
 materials = all_materials()
 categories = sorted(set(m.category for m in materials))
@@ -136,9 +134,7 @@ with lab_panel():
         fig.update_layout(
             xaxis_title="Wavelength (µm)",
             yaxis_title="Refractive Index",
-            template=PLOT_TEMPLATE,
-            paper_bgcolor=PLOT_BG,
-            plot_bgcolor=PLOT_BG,
+            **PLOT_LAYOUT,
             height=350,
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1.0),
         )
