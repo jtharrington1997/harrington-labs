@@ -97,9 +97,17 @@ def bandgap_vs_size(
     """Bandgap as function of QD diameter."""
     diameters = np.linspace(diameter_range_nm[0], diameter_range_nm[1], n_points)
     # Vectorized Brus equation (JIT-accelerated inner kernel)
+    bulk = _QD_BULK.get(material)
+    if bulk is None:
+        # Fallback for unknown materials
+        return {
+            "diameter_nm": diameters,
+            "bandgap_ev": np.full(n_points, 2.0),
+            "peak_wavelength_nm": np.full(n_points, 620.0),
+        }
+    eg_bulk, me_ratio, mh_ratio, eps_r, _ = bulk
     bandgaps = _brus_vectorized(
-        material.bulk_bandgap_ev, material.electron_mass_ratio,
-        material.hole_mass_ratio, material.dielectric_constant,
+        eg_bulk, me_ratio, mh_ratio, eps_r,
         np.asarray(diameters, dtype=np.float64),
     )
     wavelengths = 1240.0 / bandgaps  # nm
