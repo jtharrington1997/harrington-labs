@@ -3,7 +3,7 @@ import yaml
 import subprocess
 import uuid
 
-BASE = Path.home() / "Projects/harrington-lmi"
+BASE = Path(__file__).resolve().parent.parent.parent.parent.parent
 PYTHON = BASE / ".venv/bin/python"
 
 def run_campaign_blocking(spec):

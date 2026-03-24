@@ -15,7 +15,7 @@ Photonics lab simulators and laser-material interaction (LMI) dissertation platf
 
 ## LMI Platform (Pages 7–10)
 
-Merged from harrington-lmi. Sellmeier dispersion for 10 materials (Si, Ge, GaAs, SiO₂, BK7, LiNbO₃, KTP, Sapphire, ZnSe, CaF₂).
+Merged from the former harrington-lmi repo (now archived). Sellmeier dispersion for 10 materials (Si, Ge, GaAs, SiO₂, BK7, LiNbO₃, KTP, Sapphire, ZnSe, CaF₂).
 
 **JIT-accelerated simulation engines** (`src/harrington_labs/lmi/simulation/`):
 - **beam_propagation** — `_gaussian_w_z`, `_material_propagation_loop` kernels; z-scan uses `parallel_map` for >50 positions

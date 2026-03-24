@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 import subprocess
 
-BASE = Path.home() / "Projects/harrington-lmi"
+BASE = Path(__file__).resolve().parent.parent
 PYTHON = BASE / ".venv/bin/python"
 
 INBOX = BASE / "experiments/inbox"

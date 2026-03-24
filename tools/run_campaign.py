@@ -1,7 +1,7 @@
 from pathlib import Path
 import subprocess
 
-BASE = Path.home() / "Projects/harrington-lmi"
+BASE = Path(__file__).resolve().parent.parent
 PYTHON = BASE / ".venv/bin/python"
 
 CONFIG_DIR = BASE / "campaigns/si_midIR_ablation/configs"
