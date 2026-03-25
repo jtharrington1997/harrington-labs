@@ -19,6 +19,11 @@ from .parsers import (
     parse_generic_xlsx,
     detect_and_parse,
 )
+from .templates import (
+    generate_full_template,
+    generate_lab_template,
+    get_csv_template,
+)
 
 __all__ = [
     "ComparisonResult",
@@ -30,4 +35,7 @@ __all__ = [
     "parse_generic_csv",
     "parse_generic_xlsx",
     "detect_and_parse",
+    "generate_full_template",
+    "generate_lab_template",
+    "get_csv_template",
 ]

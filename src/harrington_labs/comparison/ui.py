@@ -69,6 +69,81 @@ def _residual_figure(
     return fig
 
 
+# ── Template downloads ────────────────────────────────────────────────
+
+
+# Map key_prefix hints to lab template types
+_LAB_TEMPLATE_MAP = {
+    "pulsed": "zscan",
+    "zscan": "zscan",
+    "lmi": "zscan",
+    "diode": "li_curve",
+    "fiber": "fiber",
+    "beam": "beam_profile",
+    "qd": "spectrum",
+    "coat": "spectrum",
+}
+
+
+def _render_template_downloads(key_prefix: str, lab_hint: str = ""):
+    """Render template download buttons for the current lab context."""
+    from harrington_labs.comparison.templates import (
+        generate_full_template,
+        generate_lab_template,
+        get_csv_template,
+    )
+
+    # Determine best lab template type from the key prefix
+    lab_type = "generic"
+    for hint, ltype in _LAB_TEMPLATE_MAP.items():
+        if hint in lab_hint.lower():
+            lab_type = ltype
+            break
+
+    st.caption("Download a template:")
+
+    # Lab-specific xlsx
+    try:
+        path = generate_lab_template(lab_type, f"/tmp/_template_{lab_type}.xlsx")
+        with open(path, "rb") as f:
+            st.download_button(
+                f"📄 {lab_type.replace('_', ' ').title()} (.xlsx)",
+                f.read(),
+                file_name=f"{lab_type}_template.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"{key_prefix}_dl_xlsx",
+            )
+    except Exception:
+        pass
+
+    # CSV header
+    try:
+        csv_header = get_csv_template(lab_type)
+        st.download_button(
+            "📄 CSV header",
+            csv_header,
+            file_name=f"{lab_type}_template.csv",
+            mime="text/csv",
+            key=f"{key_prefix}_dl_csv",
+        )
+    except Exception:
+        pass
+
+    # Full multi-sheet workbook
+    try:
+        full_path = generate_full_template("/tmp/_full_template.xlsx")
+        with open(full_path, "rb") as f:
+            st.download_button(
+                "📦 All labs (.xlsx)",
+                f.read(),
+                file_name="harrington_labs_experiment_template.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"{key_prefix}_dl_full",
+            )
+    except Exception:
+        pass
+
+
 # ── Main panel ──────────────────────────────────────────────────────────
 
 
@@ -101,12 +176,19 @@ def model_comparison_panel(
     ComparisonResult or None if no comparison was made.
     """
     with lab_panel(panel_title):
-        uploaded = st.file_uploader(
-            "Upload experimental data",
-            type=["xlsx", "xls", "csv", "tsv", "txt"],
-            key=f"{key_prefix}_upload",
-            help="Supports xlsx (including messy lab formats), CSV, TSV, and TXT files.",
-        )
+        # Template download + file upload side by side
+        dl_col, up_col = st.columns([1, 2])
+
+        with dl_col:
+            _render_template_downloads(key_prefix, lab_hint=key_prefix)
+
+        with up_col:
+            uploaded = st.file_uploader(
+                "Upload experimental data",
+                type=["xlsx", "xls", "csv", "tsv", "txt"],
+                key=f"{key_prefix}_upload",
+                help="Supports xlsx (including messy lab formats), CSV, TSV, and TXT files.",
+            )
 
         if uploaded is None:
             st.caption("Upload a data file to compare simulation output against measured results.")
