@@ -97,7 +97,7 @@ def laser_source_selector(
                 cols[1].markdown(f"f = **{laser.rep_rate_hz:.0f} Hz**")
 
             if laser.category == "laser":
-                st.markdown(f"⌀ = **{laser.beam_diameter_mm:.1f} mm**, M² = **{laser.m_squared:.2f}**")
+                st.markdown(f"D = **{laser.beam_diameter_mm:.1f} mm**, M² = **{laser.m_squared:.2f}**")
 
             if laser.is_tunable:
                 lo, hi = laser.tunable_range_nm

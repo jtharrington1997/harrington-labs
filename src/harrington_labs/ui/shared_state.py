@@ -41,7 +41,7 @@ def shared_beam_badge() -> None:
         st.sidebar.caption(
             f"Shared beam: {state['wavelength_nm']:.0f} nm, "
             f"{state['power_w']:.2g} W, "
-            f"⌀{state['beam_diameter_mm']:.1f} mm"
+            f"D={state['beam_diameter_mm']:.1f} mm"
         )
 
 

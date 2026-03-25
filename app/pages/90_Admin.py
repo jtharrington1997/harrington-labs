@@ -97,15 +97,15 @@ with tab_compute:
         backend = info["backend"]
 
         if backend == "cupy":
-            st.success(f"🚀 GPU Accelerated — {info.get('gpu_name', 'CUDA GPU')}")
+            st.success(f"[GPU] Accelerated — {info.get('gpu_name', 'CUDA GPU')}")
             col1, col2 = st.columns(2)
             col1.metric("CuPy Version", info.get("cupy_version", "?"))
             col2.metric("GPU VRAM", f"{info.get('gpu_memory_mb', 0):.0f} MB")
         elif backend == "numba":
-            st.info(f"⚡ Numba JIT — {info.get('numba_num_threads', '?')} CPU threads")
+            st.info(f"[JIT] Numba — {info.get('numba_num_threads', '?')} CPU threads")
             st.metric("Numba Version", info.get("numba_version", "?"))
         else:
-            st.warning("🐢 NumPy fallback — install `numba` for 10-100× speedup on physics engines")
+            st.warning("[CPU] NumPy fallback — install `numba` for 10-100× speedup on physics engines")
 
         st.metric("NumPy Version", info["numpy_version"])
         st.caption("Set `HARRINGTON_NO_JIT=1` to force NumPy fallback, "

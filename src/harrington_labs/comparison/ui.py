@@ -107,7 +107,7 @@ def _render_template_downloads(key_prefix: str, lab_hint: str = ""):
         path = generate_lab_template(lab_type, f"/tmp/_template_{lab_type}.xlsx")
         with open(path, "rb") as f:
             st.download_button(
-                f"📄 {lab_type.replace('_', ' ').title()} (.xlsx)",
+                f"[--] {lab_type.replace('_', ' ').title()} (.xlsx)",
                 f.read(),
                 file_name=f"{lab_type}_template.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -120,7 +120,7 @@ def _render_template_downloads(key_prefix: str, lab_hint: str = ""):
     try:
         csv_header = get_csv_template(lab_type)
         st.download_button(
-            "📄 CSV header",
+            "[--] CSV header",
             csv_header,
             file_name=f"{lab_type}_template.csv",
             mime="text/csv",
@@ -134,7 +134,7 @@ def _render_template_downloads(key_prefix: str, lab_hint: str = ""):
         full_path = generate_full_template("/tmp/_full_template.xlsx")
         with open(full_path, "rb") as f:
             st.download_button(
-                "📦 All labs (.xlsx)",
+                "[--] All labs (.xlsx)",
                 f.read(),
                 file_name="harrington_labs_experiment_template.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -105,4 +105,4 @@ def lab_panel(title: str = ""):
 def warning_box(warnings: list[str]) -> None:
     """Display simulation warnings."""
     for w in warnings:
-        st.warning(w, icon="⚠️")
+        st.warning(w, icon="warning")
