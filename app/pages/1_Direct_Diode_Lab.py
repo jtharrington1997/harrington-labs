@@ -11,8 +11,12 @@ st.set_page_config(page_title="Direct Diode Lab", layout="wide")
 render_header("Direct Diode Lab", "L-I curves • Thermal behavior • Far-field • Beam combining")
 
 # ── Sidebar inputs ───────────────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
+sb = get_shared_beam()
+shared_beam_badge()
+
 st.sidebar.header("Diode Parameters")
-wavelength = st.sidebar.number_input("Wavelength (nm)", 400.0, 2000.0, 976.0, 1.0)
+wavelength = st.sidebar.number_input("Wavelength (nm)", 400.0, 2000.0, sb["wavelength_nm"] if 400 <= sb["wavelength_nm"] <= 2000 else 976.0, 1.0)
 power = st.sidebar.number_input("Rated Power (W)", 0.1, 500.0, 50.0, 1.0)
 threshold = st.sidebar.number_input("Threshold Current (A)", 0.01, 10.0, 0.5, 0.05)
 operating = st.sidebar.number_input("Operating Current (A)", 0.1, 50.0, 5.0, 0.1)
@@ -107,3 +111,19 @@ with lab_panel("Spectral Beam Combining"):
     m1.metric("Raw Power", f"{sbc['raw_power_w']:.0f} W")
     m2.metric("Combined Power", f"{sbc['combined_power_w']:.1f} W")
     m3.metric("Overall Efficiency", f"{sbc['combining_efficiency']:.1%}")
+
+# ── Model Comparison ────────────────────────────────────────────
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+
+model_comparison_panel(
+    sim_x=li["current_a"],
+    sim_y=li["power_w"],
+    x_label="Current",
+    y_label="Power",
+    x_unit="A",
+    y_unit="W",
+    panel_title="Model Comparison — L-I Curve",
+    key_prefix="diode_li",
+)
+
+reference_upload_panel(key_prefix="diode_ref", save_dir="data/references")

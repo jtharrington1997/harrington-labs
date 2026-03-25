@@ -9,6 +9,10 @@ st.set_page_config(page_title="Fiber Laser Lab", layout="wide")
 render_header("Fiber Laser Lab", "Gain modeling • Nonlinear limits • Thermal analysis • Mode properties")
 
 # ── Sidebar inputs ───────────────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
+sb = get_shared_beam()
+shared_beam_badge()
+
 st.sidebar.header("Fiber Parameters")
 fiber_type = st.sidebar.selectbox("Fiber Type", [f.value for f in FiberType], index=3)
 core_d = st.sidebar.number_input("Core Diameter (µm)", 1.0, 100.0, 25.0, 1.0)
@@ -105,3 +109,19 @@ with col2:
         c1.metric("Core Temp Rise", f"{th['core_temp_rise_k']:.1f} K")
         c2.metric("Surface Temp Rise", f"{th['surface_temp_rise_k']:.1f} K")
         c3.metric("Heat Load/m", f"{th['linear_heat_load_w_m']:.1f} W/m")
+
+# ── Model Comparison ────────────────────────────────────────────
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+
+model_comparison_panel(
+    sim_x=prof["z_m"],
+    sim_y=prof["signal_w"],
+    x_label="Fiber Position",
+    y_label="Signal Power",
+    x_unit="m",
+    y_unit="W",
+    panel_title="Model Comparison — Signal Evolution",
+    key_prefix="fiber_signal",
+)
+
+reference_upload_panel(key_prefix="fiber_ref", save_dir="data/references")

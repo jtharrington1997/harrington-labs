@@ -12,11 +12,15 @@ st.set_page_config(page_title="Beam Control Lab", layout="wide")
 render_header("Beam Control Lab", "Atmospheric propagation • Turbulence • AO correction • Beam wander")
 
 # ── Sidebar: beam ────────────────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
+sb = get_shared_beam()
+shared_beam_badge()
+
 st.sidebar.header("Beam Parameters")
-wavelength = st.sidebar.number_input("Wavelength (nm)", 300.0, 12000.0, 1064.0, 1.0)
-power = st.sidebar.number_input("Power (W)", 0.001, 1e6, 100.0, 1.0)
-beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.1, 500.0, 50.0, 1.0)
-m2 = st.sidebar.number_input("M²", 1.0, 20.0, 1.1, 0.1)
+wavelength = st.sidebar.number_input("Wavelength (nm)", 300.0, 12000.0, sb["wavelength_nm"], 1.0)
+power = st.sidebar.number_input("Power (W)", 0.001, 1e6, sb["power_w"], 1.0)
+beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.1, 500.0, sb["beam_diameter_mm"], 1.0)
+m2 = st.sidebar.number_input("M²", 1.0, 20.0, sb["m_squared"], 0.1)
 
 beam = BeamParams(
     wavelength_nm=wavelength, power_w=power,
@@ -125,3 +129,19 @@ with col2:
         fig.update_xaxes(title_text="Distance (m)")
         fig.update_yaxes(title_text="Transmission", range=[0, 1.05])
         show_figure(fig)
+
+# ── Model Comparison ────────────────────────────────────────────
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+
+model_comparison_panel(
+    sim_x=prof["z_m"],
+    sim_y=prof["w_turbulence_m"] * 100,
+    x_label="Distance",
+    y_label="Beam Radius",
+    x_unit="m",
+    y_unit="cm",
+    panel_title="Model Comparison — Beam Radius",
+    key_prefix="beam_radius",
+)
+
+reference_upload_panel(key_prefix="beam_ref", save_dir="data/references")

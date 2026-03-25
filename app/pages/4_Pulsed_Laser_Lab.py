@@ -11,13 +11,24 @@ st.set_page_config(page_title="Pulsed Laser Lab", layout="wide")
 render_header("Pulsed Laser Lab", "Ultrafast pulses • Temporal & spectral profiles • Dispersion • z-Scan")
 
 # ── Sidebar ──────────────────────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
+sb = get_shared_beam()
+shared_beam_badge()
+
 st.sidebar.header("Laser Source")
-wavelength = st.sidebar.number_input("Wavelength (nm)", 200.0, 12000.0, 1030.0, 1.0)
-avg_power = st.sidebar.number_input("Average Power (W)", 0.001, 100.0, 2.0, 0.1)
-rep_rate_khz = st.sidebar.number_input("Rep Rate (kHz)", 0.001, 10000.0, 1.0, 0.1)
-pulse_width_fs = st.sidebar.number_input("Pulse Width (fs)", 1.0, 100000.0, 170.0, 1.0)
-beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.01, 50.0, 2.0, 0.1)
+wavelength = st.sidebar.number_input("Wavelength (nm)", 200.0, 12000.0, sb["wavelength_nm"], 1.0)
+avg_power = st.sidebar.number_input("Average Power (W)", 0.001, 100.0, sb["power_w"], 0.1)
+rep_rate_khz = st.sidebar.number_input("Rep Rate (kHz)", 0.001, 10000.0, sb["rep_rate_hz"] / 1e3, 0.1)
+pulse_width_fs = st.sidebar.number_input("Pulse Width (fs)", 1.0, 100000.0, sb["pulse_width_s"] * 1e15, 1.0)
+beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.01, 50.0, sb["beam_diameter_mm"], 0.1)
 shape = st.sidebar.selectbox("Pulse Shape", [s.value for s in PulseShape])
+st.sidebar.markdown("---")
+push_beam_button(
+    wavelength_nm=wavelength, power_w=avg_power,
+    beam_diameter_mm=beam_d, m_squared=1.0,
+    rep_rate_hz=rep_rate_khz * 1e3, pulse_width_s=pulse_width_fs * 1e-15,
+    key="pulsed_push",
+)
 
 beam = BeamParams(wavelength_nm=wavelength, power_w=avg_power, beam_diameter_mm=beam_d)
 pulse = PulsedSource(
@@ -129,3 +140,19 @@ with lab_panel("Open-Aperture z-Scan"):
     fig.update_yaxes(title_text="Normalized Transmission")
     show_figure(fig)
     st.caption(f"Rayleigh range: {zscan['z_rayleigh_mm']:.2f} mm")
+
+# ── Model Comparison ────────────────────────────────────────────
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+
+comparison_result = model_comparison_panel(
+    sim_x=zscan["z_mm"],
+    sim_y=zscan["transmission"],
+    x_label="Stage Position",
+    y_label="Normalized Transmission",
+    x_unit="mm",
+    panel_title="Model Comparison — z-Scan",
+    key_prefix="pulsed_zscan",
+)
+
+# ── Reference Library ───────────────────────────────────────────
+reference_upload_panel(key_prefix="pulsed_ref", save_dir="data/references")

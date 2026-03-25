@@ -352,33 +352,23 @@ qp = st.query_params
 lasers = all_lasers()
 materials = all_materials()
 
-with lab_panel():
-    st.subheader("Modeling & Simulation")
-    st.caption(
-        "Unified workspace for interaction analysis, beam propagation, z-scan preview, "
-        "thermal / nonlinear digital twin studies, campaign overlay, and export tools."
-    )
+# ── Sidebar: Source & Material ───────────────────────────────────
+st.sidebar.header("Source")
+laser_names = [l.name for l in lasers]
+default_laser_name = _qp_str(qp, "laser", laser_names[0])
+laser_index = laser_names.index(default_laser_name) if default_laser_name in laser_names else 0
+laser_name = st.sidebar.selectbox("Laser Source", laser_names, index=laser_index)
 
-with lab_panel():
-    st.subheader("Shared Source / Material State")
-    c1, c2 = st.columns(2)
-
-    laser_names = [l.name for l in lasers]
-    default_laser_name = _qp_str(qp, "laser", laser_names[0])
-    laser_index = laser_names.index(default_laser_name) if default_laser_name in laser_names else 0
-
-    material_names = [m.name for m in materials]
-    default_material_name = _qp_str(qp, "material", material_names[0])
-    material_index = material_names.index(default_material_name) if default_material_name in material_names else 0
-
-    with c1:
-        laser_name = st.selectbox("Laser Source", laser_names, index=laser_index)
-    with c2:
-        material_name = st.selectbox("Target Material", material_names, index=material_index)
+st.sidebar.header("Material")
+material_names = [m.name for m in materials]
+default_material_name = _qp_str(qp, "material", material_names[0])
+material_index = material_names.index(default_material_name) if default_material_name in material_names else 0
+material_name = st.sidebar.selectbox("Target Material", material_names, index=material_index)
 
 base_laser = next(l for l in lasers if l.name == laser_name)
 material: Material = next(m for m in materials if m.name == material_name)
 
+# ── Sidebar: Override Laser Parameters ───────────────────────────
 override_key = f"workspace_override_state::{base_laser.name}"
 if "workspace_override_active_key" not in st.session_state:
     st.session_state.workspace_override_active_key = override_key
@@ -392,153 +382,94 @@ if (
 
 ovs = st.session_state.workspace_override_state
 
-with st.expander("Override laser parameters for this workspace"):
-    with st.form("workspace_override_form"):
-        r1c1, r1c2, r1c3 = st.columns(3)
-        r2c1, r2c2, r2c3 = st.columns(3)
-
-        with r1c1:
-            override_wl_nm = st.number_input(
-                "Wavelength (nm)",
-                min_value=100.0,
-                max_value=20000.0,
-                value=float(ovs["wavelength_nm"]),
-                format="%.6g",
-            )
-
-        with r1c2:
-            if base_laser.is_cw:
-                override_power_w = st.number_input(
-                    "Power (W)",
-                    min_value=0.0,
-                    max_value=1e6,
-                    value=float(ovs["power_w"]),
-                    format="%.6g",
-                )
-                override_energy_uj = 0.0
-            else:
-                override_energy_uj = st.number_input(
-                    "Pulse Energy (µJ)",
-                    min_value=0.0,
-                    max_value=1e6,
-                    value=float(ovs["pulse_energy_uj"]),
-                    format="%.6g",
-                )
-
-        with r1c3:
-            override_beam_mm = st.number_input(
-                "Beam Diameter (mm, 1/e²)",
-                min_value=0.001,
-                max_value=100.0,
-                value=float(ovs["beam_diameter_mm"]),
-                format="%.6g",
-            )
-
-        with r2c1:
-            override_pulse_fs = st.number_input(
-                "Pulse Width (fs)",
-                min_value=1.0,
-                max_value=1e9,
-                value=float(ovs["pulse_width_s"]) * 1e15 if float(ovs["pulse_width_s"]) > 0 else 170.0,
-                format="%.6g",
-            )
-
-        with r2c2:
-            override_rep_rate_khz = st.number_input(
-                "Rep Rate (kHz)",
-                min_value=0.001,
-                max_value=1e9,
-                value=float(ovs["rep_rate_hz"]) / 1e3 if float(ovs["rep_rate_hz"]) > 0 else 10.0,
-                format="%.6g",
-            )
-
-        with r2c3:
-            override_m2 = st.number_input(
-                "M²",
-                min_value=1.0,
-                max_value=50.0,
-                value=float(ovs["m2"]),
-                step=0.1,
-                format="%.3f",
-            )
-
-        a1, a2 = st.columns(2)
-        with a1:
-            apply_overrides = st.form_submit_button("Apply overrides", width="stretch")
-        with a2:
-            reset_overrides = st.form_submit_button("Reset defaults", width="stretch")
-
-    if reset_overrides:
-        st.session_state.workspace_override_state = _laser_override_defaults(base_laser)
-        st.rerun()
-
-    if apply_overrides:
+with st.sidebar.expander("Override laser parameters"):
+    override_wl_nm = st.number_input(
+        "Wavelength (nm)", 100.0, 20000.0,
+        float(ovs["wavelength_nm"]), format="%.6g", key="ov_wl",
+    )
+    if base_laser.is_cw:
+        override_power_w = st.number_input(
+            "Power (W)", 0.0, 1e6,
+            float(ovs["power_w"]), format="%.6g", key="ov_pw",
+        )
+        override_energy_uj = 0.0
+    else:
+        override_energy_uj = st.number_input(
+            "Pulse Energy (µJ)", 0.0, 1e6,
+            float(ovs["pulse_energy_uj"]), format="%.6g", key="ov_pe",
+        )
+    override_beam_mm = st.number_input(
+        "Beam Diameter (mm)", 0.001, 100.0,
+        float(ovs["beam_diameter_mm"]), format="%.6g", key="ov_bd",
+    )
+    override_pulse_fs = st.number_input(
+        "Pulse Width (fs)", 1.0, 1e9,
+        float(ovs["pulse_width_s"]) * 1e15 if float(ovs["pulse_width_s"]) > 0 else 170.0,
+        format="%.6g", key="ov_pw_fs",
+    )
+    override_rep_rate_khz = st.number_input(
+        "Rep Rate (kHz)", 0.001, 1e9,
+        float(ovs["rep_rate_hz"]) / 1e3 if float(ovs["rep_rate_hz"]) > 0 else 10.0,
+        format="%.6g", key="ov_rr",
+    )
+    override_m2 = st.number_input(
+        "M²", 1.0, 50.0, float(ovs["m2"]), step=0.1, format="%.3f", key="ov_m2",
+    )
+    if st.button("Apply overrides", key="ov_apply"):
         ovs["wavelength_nm"] = float(override_wl_nm)
         ovs["beam_diameter_mm"] = float(override_beam_mm)
         ovs["pulse_width_s"] = float(override_pulse_fs) * 1e-15
         ovs["rep_rate_hz"] = float(override_rep_rate_khz) * 1e3
         ovs["m2"] = float(override_m2)
-
         if base_laser.is_cw:
             ovs["power_w"] = float(override_power_w)
             ovs["pulse_energy_uj"] = 0.0
         else:
             ovs["pulse_energy_uj"] = float(override_energy_uj)
             ovs["power_w"] = float(override_energy_uj) * 1e-6 * (float(override_rep_rate_khz) * 1e3)
-
+        st.rerun()
+    if st.button("Reset defaults", key="ov_reset"):
+        st.session_state.workspace_override_state = _laser_override_defaults(base_laser)
         st.rerun()
 
-with lab_panel():
-    st.subheader("Polarization / Focusing / Sample")
-    g1, g2, g3 = st.columns(3)
+# ── Sidebar: Polarization / Focusing / Sample ────────────────────
+st.sidebar.header("Focusing & Sample")
 
-    with g1:
-        qp_pol_type = _qp_str(qp, "pol_type", "Linear")
-        pol_index = POLARIZATION_TYPES.index(qp_pol_type) if qp_pol_type in POLARIZATION_TYPES else 0
-        pol_type = st.selectbox("Polarization Type", POLARIZATION_TYPES, index=pol_index)
+qp_pol_type = _qp_str(qp, "pol_type", "Linear")
+pol_index = POLARIZATION_TYPES.index(qp_pol_type) if qp_pol_type in POLARIZATION_TYPES else 0
+pol_type = st.sidebar.selectbox("Polarization", POLARIZATION_TYPES, index=pol_index)
 
-        if pol_type == "Linear":
-            pol_angle = st.number_input("Angle (°)", 0.0, 180.0, _qp_float(qp, "pol_angle", 0.0), step=1.0, format="%.0f")
-            pol_handedness = ""
-            pol_ellipticity = 0.0
-        elif pol_type == "Circular":
-            pol_handedness = st.selectbox("Handedness", ("Left", "Right"), index=0 if _qp_str(qp, "pol_hand", "Left") == "Left" else 1)
-            pol_angle = 0.0
-            pol_ellipticity = 45.0
-        elif pol_type == "Elliptical":
-            pol_handedness = st.selectbox("Handedness", ("Left", "Right"), index=0 if _qp_str(qp, "pol_hand", "Left") == "Left" else 1)
-            pol_angle = 0.0
-            pol_ellipticity = st.number_input("Ellipticity χ (°)", 0.0, 45.0, _qp_float(qp, "pol_chi", 15.0), step=1.0, format="%.1f")
-        else:
-            pol_angle = 0.0
-            pol_handedness = ""
-            pol_ellipticity = 0.0
+if pol_type == "Linear":
+    pol_angle = st.sidebar.number_input("Angle (°)", 0.0, 180.0, _qp_float(qp, "pol_angle", 0.0), step=1.0, format="%.0f")
+    pol_handedness = ""
+    pol_ellipticity = 0.0
+elif pol_type == "Circular":
+    pol_handedness = st.sidebar.selectbox("Handedness", ("Left", "Right"), index=0 if _qp_str(qp, "pol_hand", "Left") == "Left" else 1)
+    pol_angle = 0.0
+    pol_ellipticity = 45.0
+elif pol_type == "Elliptical":
+    pol_handedness = st.sidebar.selectbox("Handedness", ("Left", "Right"), index=0 if _qp_str(qp, "pol_hand", "Left") == "Left" else 1)
+    pol_angle = 0.0
+    pol_ellipticity = st.sidebar.number_input("Ellipticity χ (°)", 0.0, 45.0, _qp_float(qp, "pol_chi", 15.0), step=1.0, format="%.1f")
+else:
+    pol_angle = 0.0
+    pol_handedness = ""
+    pol_ellipticity = 0.0
 
-    with g2:
-        focal_length_mm = st.number_input(
-            "Focal Length (mm)",
-            min_value=1.0,
-            max_value=5000.0,
-            value=_qp_float(qp, "focal", 10.0) * 10.0 if qp.get("focal") else 100.0,
-            format="%.6g",
-        )
-        surface_offset_um = st.number_input(
-            "Focus Offset from Surface (µm)",
-            min_value=-5000.0,
-            max_value=5000.0,
-            value=_qp_float(qp, "offset", 0.0),
-            format="%.6g",
-        )
-
-    with g3:
-        thickness_mm = st.number_input(
-            "Thickness (mm)",
-            min_value=0.001,
-            max_value=100.0,
-            value=_qp_float(qp, "thickness", 0.5),
-            format="%.6g",
-        )
-        t_ambient_k = st.number_input("Ambient Temperature (K)", 4.0, 1000.0, 300.0, step=10.0, format="%.6g")
+focal_length_mm = st.sidebar.number_input(
+    "Focal Length (mm)", 1.0, 5000.0,
+    _qp_float(qp, "focal", 10.0) * 10.0 if qp.get("focal") else 100.0,
+    format="%.6g",
+)
+surface_offset_um = st.sidebar.number_input(
+    "Focus Offset (µm)", -5000.0, 5000.0,
+    _qp_float(qp, "offset", 0.0), format="%.6g",
+)
+thickness_mm = st.sidebar.number_input(
+    "Thickness (mm)", 0.001, 100.0,
+    _qp_float(qp, "thickness", 0.5), format="%.6g",
+)
+t_ambient_k = st.sidebar.number_input("Ambient Temp (K)", 4.0, 1000.0, 300.0, step=10.0, format="%.6g")
 
 pol_factor = _n2_correction(pol_type, pol_ellipticity)
 pol_label = _polarization_label(pol_type, pol_handedness, pol_angle, pol_ellipticity)
@@ -734,6 +665,18 @@ with tabs[1]:
         fig_zirr.update_yaxes(type="log", tickformat=".3e")
         _apply_pub_layout(fig_zirr, height=420, showlegend=False)
         st.plotly_chart(fig_zirr, width="stretch")
+
+    # Model Comparison for z-scan
+    from harrington_labs.comparison.ui import model_comparison_panel
+    model_comparison_panel(
+        sim_x=z_positions_mm,
+        sim_y=t_normalised,
+        x_label="Stage Position",
+        y_label="Normalized Transmission",
+        x_unit="mm",
+        panel_title="Model Comparison — z-Scan",
+        key_prefix="lmi_zscan",
+    )
 
 with tabs[2]:
     photon_ev = 1240.0 / laser.wavelength_nm if laser.wavelength_nm > 0 else 0.0

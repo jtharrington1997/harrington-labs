@@ -182,3 +182,18 @@ with lab_panel("Layer Stack Details"):
         })
     if rows:
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+# ── Model Comparison ────────────────────────────────────────────
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+
+model_comparison_panel(
+    sim_x=spec["wavelength_nm"],
+    sim_y=spec["reflectance"],
+    x_label="Wavelength",
+    y_label="Reflectance",
+    x_unit="nm",
+    panel_title="Model Comparison — Spectral Reflectance",
+    key_prefix="coat_refl",
+)
+
+reference_upload_panel(key_prefix="coat_ref", save_dir="data/references")

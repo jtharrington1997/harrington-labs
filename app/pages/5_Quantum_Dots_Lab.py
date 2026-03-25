@@ -142,3 +142,19 @@ with lab_panel("Temperature-Dependent PL"):
         fig.update_xaxes(title_text="Temperature (K)")
         fig.update_yaxes(title_text="Quantum Yield", range=[0, 1.05])
         show_figure(fig)
+
+# ── Model Comparison ────────────────────────────────────────────
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+
+model_comparison_panel(
+    sim_x=em["wavelength_nm"],
+    sim_y=em["intensity"],
+    x_label="Wavelength",
+    y_label="PL Intensity",
+    x_unit="nm",
+    y_unit="a.u.",
+    panel_title="Model Comparison — PL Emission",
+    key_prefix="qd_pl",
+)
+
+reference_upload_panel(key_prefix="qd_ref", save_dir="data/references")
