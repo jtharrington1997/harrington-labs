@@ -6,7 +6,7 @@ from harrington_labs.domain import FiberLaserParams, FiberType
 from harrington_labs.simulation.fiber_laser import run_fiber_laser_simulation
 
 st.set_page_config(page_title="Fiber Laser Lab", layout="wide")
-render_header("Fiber Laser Lab", "Gain modeling • Nonlinear limits • Thermal analysis • Mode properties")
+render_header("Fiber Laser Lab", "Gain modeling • Nonlinear limits • Thermal analysis • Mode properties • Beam combining")
 
 # ── Sidebar inputs ───────────────────────────────────────────────
 from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
@@ -113,6 +113,26 @@ with col2:
         c1.metric("Core Temp Rise", f"{th['core_temp_rise_k']:.1f} K")
         c2.metric("Surface Temp Rise", f"{th['surface_temp_rise_k']:.1f} K")
         c3.metric("Heat Load/m", f"{th['linear_heat_load_w_m']:.1f} W/m")
+
+# ── Beam combining ───────────────────────────────────────────
+from harrington_labs.simulation.direct_diode import spectral_beam_combining
+
+with lab_panel("Spectral Beam Combining"):
+    st.caption("Estimate combined output from multiple fiber amplifier channels through a diffraction grating.")
+    c1, c2, c3 = st.columns(3)
+    n_channels = c1.number_input("Channel Count", 2, 100, 4, key="fiber_sbc_n")
+    per_channel_w = c2.number_input(
+        "Power per Channel (W)", 1.0, 5000.0,
+        float(round(amp["signal_out_w"], 1)), 1.0,
+        key="fiber_sbc_pwr",
+    )
+    grating_eff = c3.slider("Grating Efficiency", 0.5, 0.99, 0.92, 0.01, key="fiber_sbc_eff")
+
+    sbc = spectral_beam_combining(n_channels, per_channel_w, grating_eff)
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Raw Power", f"{sbc['raw_power_w']:.0f} W")
+    m2.metric("Combined Power", f"{sbc['combined_power_w']:.1f} W")
+    m3.metric("Overall Efficiency", f"{sbc['combining_efficiency']:.1%}")
 
 # ── Model Comparison ────────────────────────────────────────────
 from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel

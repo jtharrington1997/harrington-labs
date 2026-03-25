@@ -1,7 +1,7 @@
 
 """
-pages/10_Source_Builder.py — Laser Source Builder
-Design a laser system from gain medium, pump, resonator, and output coupler.
+pages/10_Demonstrator_Builder.py — Laser Demonstrator Builder
+Full-chain laser demonstrator from gain medium, pump, resonator, and output coupler.
 Includes QD-doped pulsed fiber laser testbed.
 """
 from __future__ import annotations
@@ -22,8 +22,8 @@ from harrington_labs.lmi.ui.formatting import (
     fmt_power_w,
 )
 
-st.set_page_config(page_title="Source Builder", layout="wide")
-render_header("Source Builder", "Resonator design • QD fiber laser • QD diode + beam combining")
+st.set_page_config(page_title="Demonstrator Builder", layout="wide")
+render_header("Demonstrator Builder", "Resonator design • QD fiber laser • QD diode + beam combining")
 
 db_laser, db_material = source_and_material_sidebar("srcbuild")
 

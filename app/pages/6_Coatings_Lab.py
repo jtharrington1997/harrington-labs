@@ -185,7 +185,7 @@ with lab_panel("Layer Stack Details"):
             "QWOT": f"{layer.thickness_nm / (design.design_wavelength_nm / (4 * layer.refractive_index)):.3f}",
         })
     if rows:
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
 # ── Model Comparison ────────────────────────────────────────────
 from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel

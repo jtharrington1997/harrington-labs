@@ -930,14 +930,4 @@ with tabs[4]:
                     _apply_pub_layout(fig_custom, height=360, showlegend=True)
                     st.plotly_chart(fig_custom, width="stretch")
 
-    with lab_panel():
-        st.subheader("Legacy Fallbacks")
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.page_link("pages/30_Interaction_Analyzer_Legacy.py", label="Open Analyzer Legacy")
-        with c2:
-            st.page_link("pages/50_Simulation_Legacy.py", label="Open Simulation Legacy")
-        with c3:
-            st.page_link("pages/60_Digital_Twin_Legacy.py", label="Open Digital Twin Legacy")
-        with c4:
-            st.page_link("pages/70_Gnuplot_Legacy.py", label="Open Gnuplot Legacy")
+

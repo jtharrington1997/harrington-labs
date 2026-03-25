@@ -1,4 +1,4 @@
-"""7a_Spectroscopy_Lab.py — Advanced Spectroscopy Lab Simulator."""
+"""7a_Spectroscopy_Lab.py — Spectroscopy Lab Simulator."""
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
@@ -20,7 +20,7 @@ from harrington_labs.simulation.spectroscopy import (
 
 st.set_page_config(page_title="Spectroscopy Lab", layout="wide")
 render_header(
-    "Advanced Spectroscopy Lab",
+    "Spectroscopy Lab",
     "Raman • Brillouin • DUVRR • LIBS • FTIR • Hyperspectral Imaging",
 )
 
@@ -451,7 +451,7 @@ with tabs[5]:
                 st.caption(f"**{data_h['component_names'][i]}**")
                 fig_c = go.Figure(go.Heatmap(z=data_h["component_maps"][i], colorscale="Hot", showscale=False))
                 fig_c.update_layout(height=200, margin=dict(l=10, r=10, t=10, b=10), yaxis_scaleanchor="x")
-                st.plotly_chart(fig_c, use_container_width=True)
+                st.plotly_chart(fig_c, width="stretch")
 
         with lab_panel("Component Spectra"):
             fig_s = make_figure("Component Reference Spectra")
