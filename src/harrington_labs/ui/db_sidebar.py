@@ -16,11 +16,13 @@ def laser_source_selector(
     key_prefix: str = "src",
     show_params: bool = True,
     default_source: str = "",
+    category_filter: str = "",
 ) -> Optional[LaserSource]:
-    """Render a sidebar laser source selector.
+    """Render a sidebar light source selector.
 
     Returns the selected LaserSource, or None if 'Manual Entry' is chosen.
     Displays key parameters in the sidebar when show_params is True.
+    Supports optional category_filter to show only e.g. "laser" or "lamp".
     """
     try:
         lasers = all_lasers()
@@ -30,10 +32,35 @@ def laser_source_selector(
     if not lasers:
         return None
 
-    names = ["Manual Entry"] + [l.name for l in lasers]
+    if category_filter:
+        lasers = [l for l in lasers if l.category == category_filter]
+
+    # Group by category for display
+    _CAT_LABELS = {
+        "laser": "Lasers",
+        "lamp": "Lamps",
+        "led": "LEDs",
+        "broadband": "Broadband",
+        "synchrotron": "Synchrotron",
+    }
+    categories_present = sorted(set(l.category for l in lasers), key=lambda c: list(_CAT_LABELS).index(c) if c in _CAT_LABELS else 99)
+
+    # Build grouped name list
+    grouped_names = ["Manual Entry"]
+    name_to_source = {}
+    for cat in categories_present:
+        cat_label = _CAT_LABELS.get(cat, cat.title())
+        cat_sources = [l for l in lasers if l.category == cat]
+        grouped_names.append(f"── {cat_label} ──")
+        for l in cat_sources:
+            tunable_tag = " ◆" if l.is_tunable else ""
+            display = f"  {l.name}{tunable_tag}"
+            grouped_names.append(display)
+            name_to_source[display] = l
+
     default_idx = 0
     if default_source:
-        for i, n in enumerate(names):
+        for i, n in enumerate(grouped_names):
             if default_source.lower() in n.lower():
                 default_idx = i
                 break
@@ -41,31 +68,49 @@ def laser_source_selector(
     with st.sidebar.expander("Source Database", expanded=False):
         selected = st.selectbox(
             "Load from library",
-            names,
+            grouped_names,
             index=default_idx,
             key=f"{key_prefix}_laser_sel",
-            help="Select a laser from the database to auto-fill parameters, or use Manual Entry.",
+            help="Select a source to auto-fill parameters. ◆ = tunable.",
         )
 
-        if selected == "Manual Entry":
+        if selected == "Manual Entry" or selected.startswith("──"):
             return None
 
-        laser = next(l for l in lasers if l.name == selected)
+        laser = name_to_source.get(selected)
+        if laser is None:
+            return None
 
         if show_params:
-            st.caption(f"**{laser.name}**")
+            cat_icon = {"laser": "🔴", "lamp": "💡", "led": "🟢", "broadband": "🌈"}.get(laser.category, "")
+            st.caption(f"{cat_icon} **{laser.name}**")
             cols = st.columns(2)
             cols[0].markdown(f"λ = **{laser.wavelength_nm:.1f} nm**")
             cols[1].markdown(f"P = **{laser.power_w:.2g} W**")
-            if not laser.is_cw:
+
+            if not laser.is_cw and laser.category == "laser":
                 cols = st.columns(2)
-                cols[0].markdown(f"τ = **{laser.pulse_width_s * 1e15:.0f} fs**")
+                if laser.pulse_width_s >= 1e-9:
+                    cols[0].markdown(f"τ = **{laser.pulse_width_s * 1e9:.1f} ns**")
+                else:
+                    cols[0].markdown(f"τ = **{laser.pulse_width_s * 1e15:.0f} fs**")
                 cols[1].markdown(f"f = **{laser.rep_rate_hz:.0f} Hz**")
-            st.markdown(f"⌀ = **{laser.beam_diameter_mm:.1f} mm**, M² = **{laser.m_squared:.2f}**")
-            if laser.is_cw:
-                st.caption("CW source")
-            else:
-                st.caption(f"E = {laser.pulse_energy_j * 1e6:.2f} µJ, P_peak = {laser.peak_power_w:.2e} W")
+
+            if laser.category == "laser":
+                st.markdown(f"⌀ = **{laser.beam_diameter_mm:.1f} mm**, M² = **{laser.m_squared:.2f}**")
+
+            if laser.is_tunable:
+                lo, hi = laser.tunable_range_nm
+                st.caption(f"Tunable: {lo:.0f} – {hi:.0f} nm")
+
+            if laser.emission_lines_nm:
+                st.caption(f"{len(laser.emission_lines_nm)} emission lines")
+
+            if laser.spectral_bandwidth_nm > 0 and laser.category != "laser":
+                st.caption(f"Bandwidth: {laser.spectral_bandwidth_nm:.1f} nm FWHM")
+
+            if laser.lifetime_hours > 0:
+                st.caption(f"Lifetime: {laser.lifetime_hours:.0f} h")
 
         return laser
 
