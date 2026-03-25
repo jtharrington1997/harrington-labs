@@ -348,16 +348,44 @@ def _laser_override_defaults(base_laser) -> dict[str, float]:
 st.set_page_config(page_title="Modeling & Simulation", layout="wide")
 render_header("Modeling & Simulation", "Beam propagation • Nonlinear optics • z-Scan • Thermal analysis")
 
+# ── Shared beam state ────────────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
+sb = get_shared_beam()
+shared_beam_badge()
+
 qp = st.query_params
 lasers = all_lasers()
 materials = all_materials()
 
 # ── Sidebar: Source & Material ───────────────────────────────────
 st.sidebar.header("Source")
-laser_names = [l.name for l in lasers]
-default_laser_name = _qp_str(qp, "laser", laser_names[0])
+
+# Build source list: database sources + shared beam + custom
+_CUSTOM_LABEL = "-- Custom / Shared Beam --"
+laser_names = [_CUSTOM_LABEL] + [l.name for l in lasers]
+default_laser_name = _qp_str(qp, "laser", laser_names[1] if len(laser_names) > 1 else _CUSTOM_LABEL)
 laser_index = laser_names.index(default_laser_name) if default_laser_name in laser_names else 0
 laser_name = st.sidebar.selectbox("Laser Source", laser_names, index=laser_index)
+
+if laser_name == _CUSTOM_LABEL:
+    st.sidebar.caption("Using shared beam or manual entry")
+    _c_wl = st.sidebar.number_input("Wavelength (nm)", 100.0, 20000.0, sb["wavelength_nm"], format="%.6g", key="ms_custom_wl")
+    _c_pwr = st.sidebar.number_input("Power (W)", 0.0, 1e6, sb["power_w"], format="%.6g", key="ms_custom_pwr")
+    _c_bd = st.sidebar.number_input("Beam Diameter (mm)", 0.001, 100.0, sb["beam_diameter_mm"], format="%.6g", key="ms_custom_bd")
+    _c_m2 = st.sidebar.number_input("M²", 1.0, 50.0, sb["m_squared"], step=0.1, format="%.3f", key="ms_custom_m2")
+    _c_rr = st.sidebar.number_input("Rep Rate (kHz)", 0.0, 1e9, sb["rep_rate_hz"] / 1e3, format="%.6g", key="ms_custom_rr")
+    _c_pw = st.sidebar.number_input("Pulse Width (fs)", 0.0, 1e9, sb["pulse_width_s"] * 1e15, format="%.6g", key="ms_custom_pw")
+    base_laser = LaserSource(
+        name="Custom Source",
+        wavelength_nm=_c_wl,
+        power_w=_c_pwr,
+        beam_diameter_mm=_c_bd,
+        m_squared=_c_m2,
+        rep_rate_hz=_c_rr * 1e3,
+        pulse_width_s=_c_pw * 1e-15 if _c_pw > 0 else 0.0,
+    )
+else:
+    base_laser = next(l for l in lasers if l.name == laser_name)
 
 st.sidebar.header("Material")
 material_names = [m.name for m in materials]
@@ -365,7 +393,6 @@ default_material_name = _qp_str(qp, "material", material_names[0])
 material_index = material_names.index(default_material_name) if default_material_name in material_names else 0
 material_name = st.sidebar.selectbox("Target Material", material_names, index=material_index)
 
-base_laser = next(l for l in lasers if l.name == laser_name)
 material: Material = next(m for m in materials if m.name == material_name)
 
 # ── Sidebar: Override Laser Parameters ───────────────────────────
@@ -930,4 +957,6 @@ with tabs[4]:
                     _apply_pub_layout(fig_custom, height=360, showlegend=True)
                     st.plotly_chart(fig_custom, width="stretch")
 
-
+# ── Reference Library ──────────────────────────────────────────
+from harrington_labs.comparison.ui import reference_upload_panel
+reference_upload_panel(key_prefix="ms_ref", save_dir="data/references")

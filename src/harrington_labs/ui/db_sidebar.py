@@ -82,7 +82,7 @@ def laser_source_selector(
             return None
 
         if show_params:
-            cat_icon = {"laser": "🔴", "lamp": "💡", "led": "🟢", "broadband": "🌈"}.get(laser.category, "")
+            cat_icon = {"laser": "[L]", "lamp": "[W]", "led": "[D]", "broadband": "[B]"}.get(laser.category, "")
             st.caption(f"{cat_icon} **{laser.name}**")
             cols = st.columns(2)
             cols[0].markdown(f"λ = **{laser.wavelength_nm:.1f} nm**")

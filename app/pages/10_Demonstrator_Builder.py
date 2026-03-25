@@ -598,7 +598,7 @@ with tabs[3]:
             "export / automation."
         )
         st.page_link(
-            "pages/9_Modeling_And_Simulation.py",
+            "pages/11_Modeling_And_Simulation.py",
             label="Open Modeling & Simulation Workspace",
             icon=":material/analytics:",
         )
