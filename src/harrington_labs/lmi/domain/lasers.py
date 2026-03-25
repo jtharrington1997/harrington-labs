@@ -272,6 +272,46 @@ DEFAULT_LASERS: list[LaserSource] = [
         notes="kW-class industrial fiber laser",
     ),
     # ════════════════════════════════════════════════════════════════
+    # QD-DOPED SOURCES (Source Builder testbed designs)
+    # ════════════════════════════════════════════════════════════════
+    LaserSource(
+        name="QD Fiber Laser — PbS 5nm (1380nm)",
+        wavelength_nm=1380.0,
+        power_w=0.05,
+        rep_rate_hz=100_000.0,
+        pulse_width_s=10e-9,
+        beam_diameter_mm=0.01,
+        m_squared=1.1,
+        gain_medium="PbS QD-doped silica fiber",
+        category="laser", source_type="qd-fiber",
+        tunable_range_nm=(900, 2100),
+        spectral_bandwidth_nm=140.0,
+        notes="QD-doped fiber laser, PbS 5nm QDs. Size-tunable 900–2100nm via QD diameter. Q-switched ~10ns. Testbed design.",
+    ),
+    LaserSource(
+        name="QD Diode Array — InAs 5nm SBC (1460nm)",
+        wavelength_nm=1460.0,
+        power_w=11.0,
+        beam_diameter_mm=5.0,
+        m_squared=3.8,
+        gain_medium="InAs QD, 5-layer stack",
+        category="laser", source_type="qd-diode",
+        tunable_range_nm=(950, 2300),
+        spectral_bandwidth_nm=149.0,
+        notes="19-emitter QD diode bar, spectrally beam-combined via grating. InAs 5nm QDs, ~150nm gain bandwidth enables 19 SBC channels. Testbed design.",
+    ),
+    LaserSource(
+        name="QD Diode Array — CdSe 4nm CBC (550nm)",
+        wavelength_nm=549.0,
+        power_w=1.5,
+        beam_diameter_mm=3.0,
+        m_squared=1.5,
+        gain_medium="CdSe QD, 5-layer stack",
+        category="laser", source_type="qd-diode",
+        tunable_range_nm=(490, 670),
+        notes="7-emitter QD diode array, coherently beam-combined. CdSe 4nm QDs, visible emission. Testbed design.",
+    ),
+    # ════════════════════════════════════════════════════════════════
     # UV / EXCIMER LASERS
     # ════════════════════════════════════════════════════════════════
     LaserSource(

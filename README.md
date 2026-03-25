@@ -42,14 +42,27 @@ Merged from the former harrington-lmi repo. Sellmeier dispersion for 10 material
 - 7: Laser Library
 - 8: Material Database
 - 9: Modeling & Simulation
-- 10: Source Builder
+- 10: Source Builder (resonator design, QD fiber laser testbed, QD diode + beam combining)
 - 90: Admin (API keys, data management, compute backend status)
+
+## Source Builder Testbeds
+
+The Source Builder (page 10) hosts three design tools:
+
+**Resonator Builder** — first-pass estimate for bulk/slab gain media (Nd:YAG, Ti:Sapph, Yb:YAG, Er:Glass, etc.) with pump architecture, cavity FSR, slope efficiency, and threshold.
+
+**QD Fiber Laser** — quantum-dot-doped fiber laser with 8 QD materials (PbS, PbSe, InAs, CdSe, InP, Si, Perovskite). Empirical sizing curves, Auger recombination, single/multi-exciton gain, Q-switched and mode-locked operation.
+
+**QD Diode + Beam Combining** — QD active region diode array with three beam combining architectures:
+- Spectral Beam Combining (SBC): diffraction grating, gain-bandwidth-limited channels, spectral fill
+- Coherent Beam Combining (CBC): phase-locked aperture, Strehl decomposition (phase/tip-tilt/fill), far-field pattern
+- Hybrid SBC+CBC: CBC sub-arrays spectrally combined for simultaneous brightness and power scaling
 
 ## Key Modules
 
 | Module | Purpose |
 |--------|---------|
-| `src/harrington_labs/simulation/` | Physics engines for all 7 labs (no Streamlit imports) |
+| `src/harrington_labs/simulation/` | Physics engines for all 7 labs + 2 testbeds (no Streamlit imports) |
 | `src/harrington_labs/comparison/` | Model-vs-experiment framework: metrics, parsers, templates, UI |
 | `src/harrington_labs/lmi/` | LMI platform: beam propagation, nonlinear, thermal engines |
 | `src/harrington_labs/domain/` | Dataclasses for all labs including spectroscopy |

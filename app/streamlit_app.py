@@ -58,7 +58,7 @@ with lab_panel("Research Pipeline"):
         st.page_link("pages/2_Fiber_Laser_Lab.py", label="Fiber Laser Lab", icon="🟠")
         st.caption("Gain modeling, nonlinear thresholds, power scaling")
         st.page_link("pages/10_Source_Builder.py", label="Source Builder", icon="🔧")
-        st.caption("Design laser systems from components")
+        st.caption("QD fiber laser, QD diode + beam combining (SBC/CBC/Hybrid)")
 
     with c2:
         st.markdown("#### 2. Beam Engineering")
@@ -94,7 +94,7 @@ with lab_panel("Databases & Tools"):
 # ── Footer ───────────────────────────────────────────────────────
 st.markdown("---")
 st.caption(
-    "Harrington Labs v1.1.0 • "
+    "Harrington Labs v1.2.0 • "
     "Photonics Lab Simulators + Laser-Material Interaction • "
     "Built with Streamlit"
 )
