@@ -23,13 +23,13 @@ from harrington_labs.lmi.ui.formatting import (
 )
 
 st.set_page_config(page_title="Source Builder", layout="wide")
-render_header("Source Builder", "Resonator design • QD fiber laser testbed • Pulsed source engineering")
+render_header("Source Builder", "Resonator design • QD fiber laser • QD diode + beam combining")
 
 db_laser, db_material = source_and_material_sidebar("srcbuild")
 
 from harrington_labs.ui import PLOT_LAYOUT as PLOT_KW
 
-tabs = st.tabs(["Resonator Builder", "QD Fiber Laser Testbed"])
+tabs = st.tabs(["Resonator Builder", "QD Fiber Laser", "QD Diode + Beam Combining"])
 
 # ════════════════════════════════════════════════════════════════════
 # TAB 1: ORIGINAL RESONATOR BUILDER
@@ -335,3 +335,224 @@ with tabs[1]:
         key_prefix="qdf_compare",
     )
     reference_upload_panel(key_prefix="qdf_ref", save_dir="data/references")
+
+# ════════════════════════════════════════════════════════════════════
+# TAB 3: QD DIRECT DIODE + BEAM COMBINING
+# ════════════════════════════════════════════════════════════════════
+with tabs[2]:
+    from harrington_labs.simulation.qd_diode_combiner import (
+        QDDiodeCombinerParams, simulate_qd_diode_combiner, _QD_BULK,
+    )
+
+    st.sidebar.header("QD Diode Array")
+
+    # QD active region
+    qd_mat_d = st.sidebar.selectbox("QD Material", list(_QD_BULK.keys()),
+                                     index=list(_QD_BULK.keys()).index("InAs"), key="qdd_mat")
+    qd_diam_d = st.sidebar.number_input("QD Diameter (nm)", 1.0, 20.0, 5.0, 0.5, key="qdd_diam")
+    qd_dist_d = st.sidebar.slider("Size Distribution (%)", 1.0, 20.0, 5.0, 0.5, key="qdd_dist")
+    qd_layers = st.sidebar.number_input("QD Layers", 1, 15, 5, key="qdd_layers")
+    qd_qy_d = st.sidebar.slider("QD Quantum Yield", 0.1, 1.0, 0.6, 0.05, key="qdd_qy")
+
+    # Single emitter
+    st.sidebar.markdown("---")
+    emitter_w = st.sidebar.number_input("Emitter Width (µm)", 10.0, 500.0, 100.0, 10.0, key="qdd_ew")
+    emitter_l = st.sidebar.number_input("Cavity Length (mm)", 0.5, 6.0, 2.0, 0.5, key="qdd_el")
+    op_current = st.sidebar.number_input("Operating Current (A)", 0.1, 20.0, 2.0, 0.1, key="qdd_iop")
+    t0_val = st.sidebar.number_input("T₀ (K)", 20.0, 300.0, 80.0, 10.0, key="qdd_t0")
+
+    # Array
+    st.sidebar.markdown("---")
+    n_emitters_d = st.sidebar.number_input("Emitters per Bar", 1, 100, 19, key="qdd_ne")
+    n_bars_d = st.sidebar.number_input("Bars", 1, 20, 1, key="qdd_nb")
+    pitch_d = st.sidebar.number_input("Emitter Pitch (µm)", 100.0, 2000.0, 500.0, 50.0, key="qdd_pitch")
+
+    # Combining method
+    st.sidebar.markdown("---")
+    combining_method = st.sidebar.selectbox("Combining Method", ["SBC", "CBC", "Hybrid"], key="qdd_method")
+
+    # SBC params
+    if combining_method in ("SBC", "Hybrid"):
+        grating_eff = st.sidebar.slider("Grating Efficiency", 0.5, 0.99, 0.93, 0.01, key="qdd_geff")
+        channel_sp = st.sidebar.number_input("Channel Spacing (nm)", 0.1, 20.0, 2.0, 0.1, key="qdd_csp")
+    else:
+        grating_eff = 0.93
+        channel_sp = 2.0
+
+    # CBC params
+    if combining_method in ("CBC", "Hybrid"):
+        phase_err = st.sidebar.slider("Phase Error RMS (rad)", 0.01, 1.5, 0.3, 0.01, key="qdd_perr")
+        tt_err = st.sidebar.number_input("Tip/Tilt Error (µrad)", 0.1, 50.0, 5.0, 0.5, key="qdd_tterr")
+        fill_cbc = st.sidebar.slider("CBC Fill Factor", 0.1, 0.95, 0.7, 0.05, key="qdd_fcbc")
+    else:
+        phase_err = 0.3
+        tt_err = 5.0
+        fill_cbc = 0.7
+
+    # Hybrid params
+    if combining_method == "Hybrid":
+        n_cbc_g = st.sidebar.number_input("Emitters per CBC Group", 2, 50, 7, key="qdd_ncbc")
+        n_sbc_g = st.sidebar.number_input("SBC Groups", 2, 20, 3, key="qdd_nsbc")
+    else:
+        n_cbc_g = 7
+        n_sbc_g = 3
+
+    params_d = QDDiodeCombinerParams(
+        qd_material=qd_mat_d, qd_diameter_nm=qd_diam_d, qd_size_distribution_pct=qd_dist_d,
+        qd_layers=int(qd_layers), qd_quantum_yield=qd_qy_d,
+        emitter_width_um=emitter_w, emitter_length_mm=emitter_l,
+        operating_current_a=op_current, t0_k=t0_val,
+        n_emitters=int(n_emitters_d), n_bars=int(n_bars_d), emitter_pitch_um=pitch_d,
+        combining_method=combining_method,
+        grating_efficiency=grating_eff, channel_spacing_nm=channel_sp,
+        phase_error_rms_rad=phase_err, tip_tilt_error_urad=tt_err, fill_factor_cbc=fill_cbc,
+        n_cbc_per_group=int(n_cbc_g), n_sbc_groups=int(n_sbc_g),
+        heatsink_temp_c=25.0,
+    )
+    result_d = simulate_qd_diode_combiner(params_d)
+    dd = result_d.data
+    warning_box(result_d.warnings)
+
+    # ── QD + Single Emitter Summary ──
+    with lab_panel("QD Active Region & Single Emitter"):
+        qd_d = dd["qd"]
+        se = dd["single_emitter"]
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Emission λ", f"{qd_d['emission_nm']:.0f} nm")
+        c2.metric("Bandgap", f"{qd_d['bandgap_ev']:.3f} eV")
+        c3.metric("Gain BW", f"{qd_d['gain_bandwidth_nm']:.0f} nm")
+        c4.metric("Single Emitter", f"{se['single_emitter_power_w']:.2f} W")
+
+        c5, c6, c7, c8 = st.columns(4)
+        c5.metric("Threshold", f"{se['threshold_current_a']:.3f} A")
+        c6.metric("Slope η", f"{se['slope_efficiency_w_a']:.2f} W/A")
+        c7.metric("Modal Gain", f"{se['modal_gain_cm']:.1f} cm⁻¹")
+        c8.metric("Cavity Loss", f"{se['cavity_loss_cm']:.1f} cm⁻¹")
+
+    # ── L-I Curve ──
+    with lab_panel("Single Emitter L-I"):
+        fig = make_figure(f"{qd_mat_d} QD Diode — {qd_diam_d} nm QDs, {qd_layers} layers")
+        fig.add_trace(go.Scatter(x=se["current_a"], y=se["power_w"],
+                                 name="Power", line=dict(color=COLORS[0], width=2.5)))
+        fig.add_vline(x=se["threshold_current_a"], line_dash="dot", line_color=COLORS[3],
+                      annotation_text="Threshold")
+        fig.add_trace(go.Scatter(x=[op_current], y=[se["single_emitter_power_w"]],
+                                 mode="markers", marker=dict(size=11, symbol="star", color=COLORS[1]),
+                                 name="Operating point"))
+        fig.update_xaxes(title_text="Current (A)")
+        fig.update_yaxes(title_text="Power (W)")
+        show_figure(fig)
+
+    # ── Array + Combining ──
+    comb = dd["combining"]
+    with lab_panel(f"Beam Combining — {combining_method}"):
+        if combining_method == "SBC":
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Raw Array Power", f"{dd['array']['raw_power_w']:.1f} W")
+            c2.metric("Combined Power", f"{comb['combined_power_w']:.1f} W")
+            c3.metric("Efficiency", f"{comb['combining_efficiency']:.1%}")
+            c4.metric("Usable Emitters", f"{comb['usable_emitters']} / {dd['array']['n_emitters_total']}")
+
+            c5, c6, c7 = st.columns(3)
+            c5.metric("M² (fast)", f"{comb['m2_fast']:.1f}")
+            c6.metric("M² (slow)", f"{comb['m2_slow']:.1f}")
+            c7.metric("Spectral Width", f"{comb['total_spectral_width_nm']:.1f} nm")
+
+            fig = make_figure("SBC Spectrum")
+            fig.add_trace(go.Scatter(x=comb["spectrum_nm"], y=comb["spectrum_power"],
+                                     name="Combined", line=dict(color=COLORS[0], width=1.5)))
+            for i, lam_c in enumerate(comb["channel_wavelengths_nm"]):
+                fig.add_vline(x=lam_c, line_dash="dot", line_color="rgba(100,100,100,0.3)", line_width=0.5)
+            fig.update_xaxes(title_text="Wavelength (nm)")
+            fig.update_yaxes(title_text="Power (W)")
+            show_figure(fig)
+
+        elif combining_method == "CBC":
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Total Power", f"{comb['combined_power_w']:.1f} W")
+            c2.metric("Power in Bucket", f"{comb['power_in_bucket_w']:.1f} W")
+            c3.metric("Strehl", f"{comb['strehl_total']:.3f}")
+            c4.metric("Brightness Gain", f"{comb['brightness_gain']:.1f}×")
+
+            c5, c6, c7, c8 = st.columns(4)
+            c5.metric("Strehl (phase)", f"{comb['strehl_phase']:.3f}")
+            c6.metric("Strehl (tip/tilt)", f"{comb['strehl_tiptilt']:.3f}")
+            c7.metric("Strehl (fill)", f"{comb['strehl_fill']:.3f}")
+            c8.metric("M² (combined)", f"{comb['m2_combined']:.2f}")
+
+            fig = make_figure("CBC Far-Field Pattern")
+            fig.add_trace(go.Scatter(x=comb["far_field_angle_urad"], y=comb["far_field_intensity"],
+                                     name="Far-field", line=dict(color=COLORS[0], width=2)))
+            fig.update_xaxes(title_text="Angle (µrad)")
+            fig.update_yaxes(title_text="Normalized Intensity")
+            show_figure(fig)
+
+        else:  # Hybrid
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Total Emitters", str(comb["n_total_emitters"]))
+            c2.metric("Combined Power", f"{comb['combined_power_w']:.1f} W")
+            c3.metric("Overall η", f"{comb['overall_efficiency']:.1%}")
+            c4.metric("Brightness Gain", f"{comb['brightness_gain']:.1f}×")
+
+            c5, c6, c7 = st.columns(3)
+            c5.metric("CBC Strehl (avg)", f"{comb['cbc_strehl_avg']:.3f}")
+            c6.metric("SBC Efficiency", f"{comb['sbc_efficiency']:.1%}")
+            c7.metric("Architecture", f"{comb['n_cbc_per_group']}×CBC → {comb['n_sbc_groups']}×SBC")
+
+            # Show the SBC sub-result spectrum
+            sbc_sub = comb["sbc_result"]
+            fig = make_figure("Hybrid SBC Spectrum (of CBC sub-arrays)")
+            fig.add_trace(go.Scatter(x=sbc_sub["spectrum_nm"], y=sbc_sub["spectrum_power"],
+                                     name="Combined", line=dict(color=COLORS[0], width=1.5)))
+            fig.update_xaxes(title_text="Wavelength (nm)")
+            fig.update_yaxes(title_text="Power (W)")
+            show_figure(fig)
+
+    # ── QD Advantage ──
+    with lab_panel("QD Advantage over QW"):
+        adv = dd["qd_advantage"]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Gain BW", f"{adv['gain_bandwidth_nm']:.0f} nm", f"{adv['gain_bandwidth_vs_qw']:.0f}× wider than QW")
+        c2.metric("T₀ Advantage", f"{adv['t0_advantage']:.1f}× higher")
+        lo, hi = adv["size_tunable_range_nm"]
+        c3.metric("Tunable Range", f"{lo:.0f} – {hi:.0f} nm")
+        st.caption(
+            "QD diodes offer broader gain bandwidth (enabling more SBC channels), "
+            "higher T₀ (less thermal sensitivity), and size-tunable emission across "
+            "a wide spectral range — all from the same material system."
+        )
+
+    # ── Size sweep plots ──
+    col1, col2 = st.columns(2)
+    with col1:
+        with lab_panel("Emission vs QD Size"):
+            ss = dd["size_sweep"]
+            fig = make_figure("Size-Tunable Emission")
+            fig.add_trace(go.Scatter(x=ss["diameter_nm"], y=ss["emission_nm"],
+                                     name="λ_em", line=dict(color=COLORS[1], width=2.5)))
+            fig.add_vline(x=qd_diam_d, line_dash="dot", line_color=COLORS[0],
+                          annotation_text=f"{qd_diam_d} nm")
+            fig.update_xaxes(title_text="QD Diameter (nm)")
+            fig.update_yaxes(title_text="Emission Wavelength (nm)")
+            show_figure(fig)
+    with col2:
+        with lab_panel("SBC Channels vs QD Size"):
+            # How many SBC channels fit in the gain bandwidth at each size
+            channels = ss["gain_bandwidth_nm"] / channel_sp
+            fig = make_figure("Available SBC Channels")
+            fig.add_trace(go.Scatter(x=ss["diameter_nm"], y=channels,
+                                     name="Channels", line=dict(color=COLORS[2], width=2.5)))
+            fig.add_vline(x=qd_diam_d, line_dash="dot", line_color=COLORS[0])
+            fig.update_xaxes(title_text="QD Diameter (nm)")
+            fig.update_yaxes(title_text=f"SBC Channels ({channel_sp:.1f} nm spacing)")
+            show_figure(fig)
+
+    # Model Comparison
+    from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
+    model_comparison_panel(
+        sim_x=se["current_a"], sim_y=se["power_w"],
+        x_label="Current", y_label="Power", x_unit="A", y_unit="W",
+        panel_title="Model Comparison — QD Diode L-I",
+        key_prefix="qdd_compare",
+    )
+    reference_upload_panel(key_prefix="qdd_ref", save_dir="data/references")
