@@ -12,15 +12,22 @@ render_header("Pulsed Laser Lab", "Ultrafast pulses • Temporal & spectral prof
 
 # ── Sidebar ──────────────────────────────────────────────────────
 from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
 sb = get_shared_beam()
 shared_beam_badge()
+db_laser, db_material = source_and_material_sidebar("pulsed")
 
 st.sidebar.header("Laser Source")
-wavelength = st.sidebar.number_input("Wavelength (nm)", 200.0, 12000.0, sb["wavelength_nm"], 1.0)
-avg_power = st.sidebar.number_input("Average Power (W)", 0.001, 100.0, sb["power_w"], 0.1)
-rep_rate_khz = st.sidebar.number_input("Rep Rate (kHz)", 0.001, 10000.0, sb["rep_rate_hz"] / 1e3, 0.1)
-pulse_width_fs = st.sidebar.number_input("Pulse Width (fs)", 1.0, 100000.0, sb["pulse_width_s"] * 1e15, 1.0)
-beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.01, 50.0, sb["beam_diameter_mm"], 0.1)
+_def_wl = db_laser.wavelength_nm if db_laser else sb["wavelength_nm"]
+_def_pwr = db_laser.power_w if db_laser else sb["power_w"]
+_def_rr = (db_laser.rep_rate_hz / 1e3) if db_laser and db_laser.rep_rate_hz > 0 else sb["rep_rate_hz"] / 1e3
+_def_pw = (db_laser.pulse_width_s * 1e15) if db_laser and db_laser.pulse_width_s > 0 else sb["pulse_width_s"] * 1e15
+_def_bd = db_laser.beam_diameter_mm if db_laser else sb["beam_diameter_mm"]
+wavelength = st.sidebar.number_input("Wavelength (nm)", 200.0, 12000.0, _def_wl, 1.0)
+avg_power = st.sidebar.number_input("Average Power (W)", 0.001, 100.0, min(_def_pwr, 100.0), 0.1)
+rep_rate_khz = st.sidebar.number_input("Rep Rate (kHz)", 0.001, 10000.0, _def_rr, 0.1)
+pulse_width_fs = st.sidebar.number_input("Pulse Width (fs)", 1.0, 100000.0, _def_pw, 1.0)
+beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.01, 50.0, _def_bd, 0.1)
 shape = st.sidebar.selectbox("Pulse Shape", [s.value for s in PulseShape])
 st.sidebar.markdown("---")
 push_beam_button(

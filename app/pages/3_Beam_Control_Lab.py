@@ -13,14 +13,20 @@ render_header("Beam Control Lab", "Atmospheric propagation • Turbulence • AO
 
 # ── Sidebar: beam ────────────────────────────────────────────────
 from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
 sb = get_shared_beam()
 shared_beam_badge()
+db_laser, db_material = source_and_material_sidebar("beam")
 
 st.sidebar.header("Beam Parameters")
-wavelength = st.sidebar.number_input("Wavelength (nm)", 300.0, 12000.0, sb["wavelength_nm"], 1.0)
-power = st.sidebar.number_input("Power (W)", 0.001, 1e6, sb["power_w"], 1.0)
-beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.1, 500.0, sb["beam_diameter_mm"], 1.0)
-m2 = st.sidebar.number_input("M²", 1.0, 20.0, sb["m_squared"], 0.1)
+_def_wl = db_laser.wavelength_nm if db_laser else sb["wavelength_nm"]
+_def_pwr = db_laser.power_w if db_laser else sb["power_w"]
+_def_bd = db_laser.beam_diameter_mm if db_laser else sb["beam_diameter_mm"]
+_def_m2 = db_laser.m_squared if db_laser else sb["m_squared"]
+wavelength = st.sidebar.number_input("Wavelength (nm)", 300.0, 12000.0, _def_wl, 1.0)
+power = st.sidebar.number_input("Power (W)", 0.001, 1e6, _def_pwr, 1.0)
+beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.1, 500.0, _def_bd, 1.0)
+m2 = st.sidebar.number_input("M²", 1.0, 20.0, _def_m2, 0.1)
 
 beam = BeamParams(
     wavelength_nm=wavelength, power_w=power,

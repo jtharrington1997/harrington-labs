@@ -24,6 +24,10 @@ render_header(
     "Raman • Brillouin • DUVRR • LIBS • FTIR • Hyperspectral Imaging",
 )
 
+# ── Database access ──────────────────────────────────────────────
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
+db_laser, db_material = source_and_material_sidebar("spectro")
+
 # ── Technique selector ──────────────────────────────────────────────
 tabs = st.tabs([
     "Raman",
@@ -44,8 +48,10 @@ with tabs[0]:
     exc_wl_options = {e.value: float(e.value.replace(" nm", "")) for e in RamanExcitation}
     exc_sel = st.sidebar.selectbox("Excitation Wavelength", list(exc_wl_options.keys()), index=4, key="raman_exc")
     exc_wl = exc_wl_options[exc_sel]
+    if db_laser:
+        exc_wl = db_laser.wavelength_nm  # override with database source
 
-    raman_power = st.sidebar.number_input("Laser Power (mW)", 0.1, 1000.0, 50.0, 1.0, key="raman_pwr")
+    raman_power = st.sidebar.number_input("Laser Power (mW)", 0.1, 1000.0, db_laser.power_w * 1e3 if db_laser else 50.0, 1.0, key="raman_pwr")
     raman_int_time = st.sidebar.number_input("Integration Time (s)", 0.01, 300.0, 1.0, 0.1, key="raman_int")
     raman_na = st.sidebar.number_input("Objective NA", 0.1, 1.4, 0.75, 0.05, key="raman_na")
     raman_res = st.sidebar.number_input("Spectral Resolution (cm⁻¹)", 0.5, 20.0, 4.0, 0.5, key="raman_res")
@@ -172,12 +178,14 @@ with tabs[0]:
 with tabs[1]:
     st.sidebar.header("Brillouin Parameters")
     brill_mode = st.sidebar.radio("Mode", ["Spontaneous", "Stimulated (SBS)"], key="brill_mode")
-    brill_wl = st.sidebar.number_input("Wavelength (nm)", 400.0, 1600.0, 532.0, 1.0, key="brill_wl")
-    brill_power = st.sidebar.number_input("Power (mW)", 1.0, 5000.0, 100.0, 10.0, key="brill_pwr")
+    brill_wl = st.sidebar.number_input("Wavelength (nm)", 400.0, 1600.0, db_laser.wavelength_nm if db_laser else 532.0, 1.0, key="brill_wl")
+    brill_power = st.sidebar.number_input("Power (mW)", 1.0, 5000.0, db_laser.power_w * 1e3 if db_laser else 100.0, 10.0, key="brill_pwr")
     brill_angle = st.sidebar.number_input("Scattering Angle (°)", 1.0, 180.0, 180.0, 1.0, key="brill_angle")
     brill_v = st.sidebar.number_input("Sound Velocity (m/s)", 100.0, 20000.0, 5960.0, 10.0, key="brill_v")
-    brill_n = st.sidebar.number_input("Refractive Index", 1.0, 4.0, 1.46, 0.01, key="brill_n")
-    brill_rho = st.sidebar.number_input("Density (kg/m³)", 500.0, 20000.0, 2200.0, 100.0, key="brill_rho")
+    _def_n = db_material.refractive_index if db_material and db_material.refractive_index > 0 else 1.46
+    _def_rho = db_material.density_kg_m3 if db_material and db_material.density_kg_m3 > 0 else 2200.0
+    brill_n = st.sidebar.number_input("Refractive Index", 1.0, 4.0, _def_n, 0.01, key="brill_n")
+    brill_rho = st.sidebar.number_input("Density (kg/m³)", 500.0, 20000.0, _def_rho, 100.0, key="brill_rho")
     brill_alpha = st.sidebar.number_input("Acoustic Atten. (dB/cm/GHz²)", 0.01, 10.0, 0.5, 0.1, key="brill_alpha")
 
     brill_params = BrillouinParams(

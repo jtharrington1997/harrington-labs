@@ -10,8 +10,10 @@ render_header("Fiber Laser Lab", "Gain modeling • Nonlinear limits • Thermal
 
 # ── Sidebar inputs ───────────────────────────────────────────────
 from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
 sb = get_shared_beam()
 shared_beam_badge()
+db_laser, db_material = source_and_material_sidebar("fiber")
 
 st.sidebar.header("Fiber Parameters")
 fiber_type = st.sidebar.selectbox("Fiber Type", [f.value for f in FiberType], index=3)
@@ -21,8 +23,10 @@ na = st.sidebar.number_input("NA", 0.01, 0.50, 0.065, 0.005, format="%.3f")
 length = st.sidebar.number_input("Fiber Length (m)", 0.1, 30.0, 3.0, 0.1)
 
 st.sidebar.header("Pump & Signal")
-pump_wl = st.sidebar.number_input("Pump Wavelength (nm)", 800.0, 1100.0, 976.0, 1.0)
-pump_pwr = st.sidebar.number_input("Pump Power (W)", 0.1, 500.0, 50.0, 1.0)
+_def_pump_wl = db_laser.wavelength_nm if db_laser and 800 <= db_laser.wavelength_nm <= 1100 else 976.0
+_def_pump_pwr = db_laser.power_w if db_laser else 50.0
+pump_wl = st.sidebar.number_input("Pump Wavelength (nm)", 800.0, 1100.0, _def_pump_wl, 1.0)
+pump_pwr = st.sidebar.number_input("Pump Power (W)", 0.1, 500.0, _def_pump_pwr, 1.0)
 sig_wl = st.sidebar.number_input("Signal Wavelength (nm)", 900.0, 2200.0, 1064.0, 1.0)
 seed_pwr = st.sidebar.number_input("Seed Power (W)", 0.0001, 10.0, 0.01, 0.001, format="%.4f")
 

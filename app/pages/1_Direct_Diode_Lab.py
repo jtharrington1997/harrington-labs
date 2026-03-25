@@ -12,12 +12,16 @@ render_header("Direct Diode Lab", "L-I curves • Thermal behavior • Far-field
 
 # ── Sidebar inputs ───────────────────────────────────────────────
 from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
 sb = get_shared_beam()
 shared_beam_badge()
+db_laser, db_material = source_and_material_sidebar("diode")
 
 st.sidebar.header("Diode Parameters")
-wavelength = st.sidebar.number_input("Wavelength (nm)", 400.0, 2000.0, sb["wavelength_nm"] if 400 <= sb["wavelength_nm"] <= 2000 else 976.0, 1.0)
-power = st.sidebar.number_input("Rated Power (W)", 0.1, 500.0, 50.0, 1.0)
+_def_wl = db_laser.wavelength_nm if db_laser else (sb["wavelength_nm"] if 400 <= sb["wavelength_nm"] <= 2000 else 976.0)
+_def_pwr = db_laser.power_w if db_laser else 50.0
+wavelength = st.sidebar.number_input("Wavelength (nm)", 400.0, 2000.0, _def_wl, 1.0)
+power = st.sidebar.number_input("Rated Power (W)", 0.1, 500.0, _def_pwr, 1.0)
 threshold = st.sidebar.number_input("Threshold Current (A)", 0.01, 10.0, 0.5, 0.05)
 operating = st.sidebar.number_input("Operating Current (A)", 0.1, 50.0, 5.0, 0.1)
 slope_eff = st.sidebar.slider("Slope Efficiency", 0.1, 1.0, 0.65, 0.01)

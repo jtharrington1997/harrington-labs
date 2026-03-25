@@ -9,6 +9,9 @@ st.set_page_config(page_title="Quantum Dots Lab", layout="wide")
 render_header("Quantum Dots Lab", "Brus bandgap • PL & absorption spectra • Exciton dynamics • Temperature dependence")
 
 # ── Sidebar ──────────────────────────────────────────────────────
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
+db_laser, db_material = source_and_material_sidebar("qd")
+
 st.sidebar.header("QD Parameters")
 material = st.sidebar.selectbox("Material", [m.value for m in QDMaterial], index=1)
 diameter = st.sidebar.number_input("QD Diameter (nm)", 1.0, 20.0, 5.0, 0.1)
