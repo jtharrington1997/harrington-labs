@@ -17,10 +17,10 @@ All physics engines are JIT-accelerated via `harrington_common.compute` — auto
 | 5 | Beam Control Lab | Atmospheric propagation, Fried parameter, Rytov scintillation, AO Strehl |
 | 6 | Coatings Lab | Transfer matrix, spectral/angular reflectance, E-field, GDD, custom stacks |
 | 7 | Advanced Spectroscopy Lab | Raman (spontaneous + SRS), Brillouin (spontaneous + SBS), DUVRR, LIBS, FTIR, hyperspectral imaging |
-| 8 | Laser Library | 35 sources (pulsed + CW lasers, calibration lamps, LEDs, broadband) with grouped sidebar selector |
-| 9 | Material Database | 27 materials with Sellmeier dispersion. Optical, thermal, mechanical properties |
 | 10 | Demonstrator Builder | Full-chain laser demonstrator — resonator, QD fiber laser, QD diode + beam combining, M&S workspace |
 | 11 | Modeling & Simulation | LMI workspace — regime classification, beam propagation, nonlinear, thermal, z-scan, campaign overlay, export. Custom / shared beam source support |
+| 80 | Laser Library | 35 sources (pulsed + CW lasers, calibration lamps, LEDs, broadband) with grouped sidebar selector |
+| 81 | Material Database | 27 materials with Sellmeier dispersion. Optical, thermal, mechanical properties |
 | 90 | Admin | API keys, data management, compute backend status |
 
 ## Simulation Engines

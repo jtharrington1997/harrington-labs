@@ -76,10 +76,10 @@ with lab_panel("Research Pipeline"):
 with lab_panel("Databases & Tools"):
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.page_link("pages/8_Laser_Library.py", label="Laser Library")
+        st.page_link("pages/80_Laser_Library.py", label="Laser Library")
         st.caption("Commercial lasers, custom sources, OPA chaining")
     with c2:
-        st.page_link("pages/9_Material_Database.py", label="Material Database")
+        st.page_link("pages/81_Material_Database.py", label="Material Database")
         st.caption("Optical, thermal, mechanical properties with Sellmeier dispersion")
     with c3:
         st.page_link("pages/90_Admin.py", label="Admin")
