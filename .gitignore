@@ -8,4 +8,8 @@ build/
 *.log
 data/exports/
 data/processed/
+data/references/*
+!data/references/.gitkeep
+data/templates/*
+!data/templates/.gitkeep
 .streamlit/secrets.toml

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "harrington-labs"
-version = "1.0.0"
+version = "1.1.0"
 description = "Photonics lab simulators and laser-material interaction platform"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,6 +18,7 @@ dependencies = [
     "matplotlib>=3.7.0",
     "plotly>=5.18.0",
     "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
     "harrington-common",
     "numba>=0.64.0",
     "joblib>=1.5.3",

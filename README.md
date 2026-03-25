@@ -1,8 +1,10 @@
 # harrington-labs
 
-Photonics lab simulators and laser-material interaction (LMI) dissertation platform. All physics engines are JIT-accelerated via `harrington_common.compute` — automatic CUDA GPU → Numba CPU → NumPy fallback.
+Photonics lab simulators and laser-material interaction (LMI) dissertation platform. Reducing geometric footprint of light sources while improving power and energy — advancing science, technology, and medicine through light-matter interaction research.
 
-## Lab Simulators (Pages 1–6)
+All physics engines are JIT-accelerated via `harrington_common.compute` — automatic CUDA GPU → Numba CPU → NumPy fallback.
+
+## Lab Simulators (Pages 1–7)
 
 | Lab | Physics Engines | JIT Status |
 |-----|----------------|------------|
@@ -12,10 +14,19 @@ Photonics lab simulators and laser-material interaction (LMI) dissertation platf
 | Pulsed Laser | Ultrafast profiles, autocorrelation, GDD dispersion, open-aperture z-scan | ✓ Compute import |
 | Quantum Dots | Brus equation, PL/absorption spectra, exciton dynamics, temperature dependence | ✓ `_brus_vectorized` |
 | Coatings | Transfer matrix, spectral/angular reflectance, E-field, GDD, custom stacks | ✓ `parallel_map` spectral sweep |
+| Spectroscopy | Raman (spontaneous + SRS), Brillouin (spontaneous + SBS), DUVRR, LIBS, FTIR, hyperspectral imaging | — |
 
-## LMI Platform (Pages 7–10)
+## Cross-Lab Features
 
-Merged from the former harrington-lmi repo (now archived). Sellmeier dispersion for 10 materials (Si, Ge, GaAs, SiO₂, BK7, LiNbO₃, KTP, Sapphire, ZnSe, CaF₂).
+- **Model Comparison** — every lab has a panel to upload experimental data (xlsx, csv, txt) and compare against simulation output with R², RMSE, NRMSE, residual plots. Includes downloadable templates.
+- **Shared Beam State** — configure a source in one lab, carry the parameters to other labs via session state.
+- **Source Database** — 32 light sources (19 lasers, 9 calibration/broadband lamps, 4 LEDs) with grouped sidebar selector on every page.
+- **Material Database** — 27 materials with Sellmeier dispersion for 10 optical materials. Sidebar selector on every page.
+- **Reference Library** — upload research papers and datasheets on any lab page; persisted to `data/references/`.
+
+## LMI Platform (Pages 8–10)
+
+Merged from the former harrington-lmi repo. Sellmeier dispersion for 10 materials (Si, Ge, GaAs, SiO₂, BK7, LiNbO₃, KTP, Sapphire, ZnSe, CaF₂).
 
 **JIT-accelerated simulation engines** (`src/harrington_labs/lmi/simulation/`):
 - **beam_propagation** — `_gaussian_w_z`, `_material_propagation_loop` kernels; z-scan uses `parallel_map` for >50 positions
@@ -26,13 +37,23 @@ Merged from the former harrington-lmi repo (now archived). Sellmeier dispersion 
 
 ## Pages
 
-- 1–6: Lab simulators
+- 1–6: Lab simulators (Direct Diode, Fiber Laser, Beam Control, Pulsed Laser, Quantum Dots, Coatings)
+- 7a: Advanced Spectroscopy Lab
 - 7: Laser Library
 - 8: Material Database
 - 9: Modeling & Simulation
 - 10: Source Builder
-- 30–80: Legacy pages (migration continuity)
-- 90: Admin (API keys, data management, **Compute backend status**)
+- 90: Admin (API keys, data management, compute backend status)
+
+## Key Modules
+
+| Module | Purpose |
+|--------|---------|
+| `src/harrington_labs/simulation/` | Physics engines for all 7 labs (no Streamlit imports) |
+| `src/harrington_labs/comparison/` | Model-vs-experiment framework: metrics, parsers, templates, UI |
+| `src/harrington_labs/lmi/` | LMI platform: beam propagation, nonlinear, thermal engines |
+| `src/harrington_labs/domain/` | Dataclasses for all labs including spectroscopy |
+| `src/harrington_labs/ui/` | Shared UI: theme, shared beam state, database sidebar selectors |
 
 ## Installation
 
