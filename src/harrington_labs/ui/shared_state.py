@@ -54,7 +54,7 @@ def push_beam_button(
     pulse_width_s: float = 170e-15,
     key: str = "push_beam",
 ) -> bool:
-    """Render a 'Share to other labs' button. Returns True if clicked."""
+    """Render a 'Share to other labs' button in the main content area. Returns True if clicked."""
     if st.button("Share beam to other labs", key=key, help="Sets these beam parameters as defaults in other lab pages"):
         update_shared_beam(
             wavelength_nm=wavelength_nm,

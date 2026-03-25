@@ -12,9 +12,9 @@ All physics engines are JIT-accelerated via `harrington_common.compute` — auto
 |---|------|-------------|
 | 1 | Direct Diode Lab | L-I curves, thermal rollover, wavelength drift, far-field, spectral beam combining |
 | 2 | Fiber Laser Lab | Gain modeling, pump/signal evolution, nonlinear thresholds, thermal, beam combining |
-| 3 | Beam Control Lab | Atmospheric propagation, Fried parameter, Rytov scintillation, AO Strehl |
-| 4 | Pulsed Laser Lab | Ultrafast profiles, autocorrelation, GDD dispersion, z-scan, beam combining (SBC + CBC) |
-| 5 | Quantum Dots Lab | Brus equation, PL/absorption spectra, exciton dynamics, temperature dependence |
+| 3 | Pulsed Laser Lab | Ultrafast profiles, autocorrelation, GDD dispersion, z-scan, beam combining (SBC + CBC) |
+| 4 | Quantum Dots Lab | Brus equation, PL/absorption spectra, exciton dynamics, temperature dependence |
+| 5 | Beam Control Lab | Atmospheric propagation, Fried parameter, Rytov scintillation, AO Strehl |
 | 6 | Coatings Lab | Transfer matrix, spectral/angular reflectance, E-field, GDD, custom stacks |
 | 7 | Advanced Spectroscopy Lab | Raman (spontaneous + SRS), Brillouin (spontaneous + SBS), DUVRR, LIBS, FTIR, hyperspectral imaging |
 | 8 | Laser Library | 35 sources (pulsed + CW lasers, calibration lamps, LEDs, broadband) with grouped sidebar selector |

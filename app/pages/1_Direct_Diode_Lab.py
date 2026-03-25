@@ -31,6 +31,7 @@ t0 = st.sidebar.number_input("T₀ Characteristic Temp (K)", 50.0, 500.0, 150.0,
 t1 = st.sidebar.number_input("T₁ Slope Char. Temp (K)", 100.0, 1000.0, 400.0, 10.0)
 r_th = st.sidebar.number_input("Thermal Resistance (K/W)", 0.1, 10.0, 1.5, 0.1)
 heatsink_t = st.sidebar.number_input("Heatsink Temp (°C)", -10.0, 80.0, 25.0, 1.0)
+beam_d = st.sidebar.number_input("Collimated Beam Diameter (mm)", 0.1, 50.0, sb["beam_diameter_mm"], 0.1)
 
 params = DiodeLaserParams(
     wavelength_nm=wavelength,
@@ -52,6 +53,11 @@ wl_temp = result.data["wavelength_temp"]
 
 # ── Warnings ─────────────────────────────────────────────────────
 warning_box(result.warnings)
+push_beam_button(
+    wavelength_nm=wavelength, power_w=power,
+    beam_diameter_mm=beam_d, m_squared=sb["m_squared"],
+    key="diode_push",
+)
 
 # ── L-I Curve ────────────────────────────────────────────────────
 with lab_panel("L-I Characteristic"):

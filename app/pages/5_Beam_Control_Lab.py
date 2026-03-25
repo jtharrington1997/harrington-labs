@@ -1,4 +1,4 @@
-"""3_Beam_Control_Lab.py — Beam Control & Atmospheric Propagation Simulator."""
+"""5_Beam_Control_Lab.py — Beam Control & Atmospheric Propagation Simulator."""
 import streamlit as st
 import plotly.graph_objects as go
 from harrington_labs.ui import render_header, lab_panel, make_figure, show_figure, warning_box, COLORS

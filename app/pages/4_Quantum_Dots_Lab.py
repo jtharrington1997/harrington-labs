@@ -1,4 +1,4 @@
-"""5_Quantum_Dots_Lab.py — Quantum Dots Lab Simulator."""
+"""4_Quantum_Dots_Lab.py — Quantum Dots Lab Simulator."""
 import streamlit as st
 import plotly.graph_objects as go
 from harrington_labs.ui import render_header, lab_panel, make_figure, show_figure, warning_box, COLORS
@@ -40,6 +40,13 @@ params = QuantumDotParams(
 
 result = run_quantum_dot_simulation(params)
 warning_box(result.warnings)
+push_beam_button(
+    wavelength_nm=result.data["peak_emission_nm"],
+    power_w=sb["power_w"],
+    beam_diameter_mm=sb["beam_diameter_mm"],
+    m_squared=sb["m_squared"],
+    key="qd_push",
+)
 
 # ── Summary ──────────────────────────────────────────────────────
 with lab_panel("QD Summary"):
@@ -148,16 +155,6 @@ with lab_panel("Temperature-Dependent PL"):
         fig.update_xaxes(title_text="Temperature (K)")
         fig.update_yaxes(title_text="Quantum Yield", range=[0, 1.05])
         show_figure(fig)
-
-# ── Share beam ─────────────────────────────────────────────────
-st.sidebar.markdown("---")
-push_beam_button(
-    wavelength_nm=result.data["peak_emission_nm"],
-    power_w=sb["power_w"],
-    beam_diameter_mm=sb["beam_diameter_mm"],
-    m_squared=sb["m_squared"],
-    key="qd_push",
-)
 
 # ── Model Comparison ────────────────────────────────────────────
 from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel

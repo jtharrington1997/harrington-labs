@@ -34,14 +34,6 @@ st.sidebar.header("Doping")
 dopant = st.sidebar.selectbox("Dopant", ["Yb", "Er", "Tm", "Ho"])
 doping = st.sidebar.number_input("Doping (ppm)", 100, 50000, 1000, 100)
 bg_loss = st.sidebar.number_input("Background Loss (dB/m)", 0.0, 0.1, 0.005, 0.001, format="%.3f")
-st.sidebar.markdown("---")
-push_beam_button(
-    wavelength_nm=sig_wl,
-    power_w=pump_pwr,
-    beam_diameter_mm=sb["beam_diameter_mm"],
-    m_squared=sb["m_squared"],
-    key="fiber_push",
-)
 
 params = FiberLaserParams(
     fiber_type=FiberType(fiber_type),
@@ -60,6 +52,11 @@ params = FiberLaserParams(
 
 result = run_fiber_laser_simulation(params)
 warning_box(result.warnings)
+push_beam_button(
+    wavelength_nm=sig_wl, power_w=pump_pwr,
+    beam_diameter_mm=sb["beam_diameter_mm"], m_squared=sb["m_squared"],
+    key="fiber_push",
+)
 
 # ── Fiber mode summary ───────────────────────────────────────────
 with lab_panel("Fiber Mode Properties"):

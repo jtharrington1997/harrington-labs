@@ -1,4 +1,4 @@
-"""4_Pulsed_Laser_Lab.py — Pulsed Laser Lab Simulator."""
+"""3_Pulsed_Laser_Lab.py — Pulsed Laser Lab Simulator."""
 import streamlit as st
 import plotly.graph_objects as go
 from harrington_labs.ui import render_header, lab_panel, make_figure, show_figure, warning_box, COLORS
@@ -29,13 +29,6 @@ rep_rate_khz = st.sidebar.number_input("Rep Rate (kHz)", 0.001, 10000.0, _def_rr
 pulse_width_fs = st.sidebar.number_input("Pulse Width (fs)", 1.0, 100000.0, _def_pw, 1.0)
 beam_d = st.sidebar.number_input("Beam Diameter (mm)", 0.01, 50.0, _def_bd, 0.1)
 shape = st.sidebar.selectbox("Pulse Shape", [s.value for s in PulseShape])
-st.sidebar.markdown("---")
-push_beam_button(
-    wavelength_nm=wavelength, power_w=avg_power,
-    beam_diameter_mm=beam_d, m_squared=1.0,
-    rep_rate_hz=rep_rate_khz * 1e3, pulse_width_s=pulse_width_fs * 1e-15,
-    key="pulsed_push",
-)
 
 beam = BeamParams(wavelength_nm=wavelength, power_w=avg_power, beam_diameter_mm=beam_d)
 pulse = PulsedSource(
@@ -47,6 +40,12 @@ pulse = PulsedSource(
 
 result = run_pulsed_laser_simulation(pulse)
 warning_box(result.warnings)
+push_beam_button(
+    wavelength_nm=wavelength, power_w=avg_power,
+    beam_diameter_mm=beam_d, m_squared=1.0,
+    rep_rate_hz=rep_rate_khz * 1e3, pulse_width_s=pulse_width_fs * 1e-15,
+    key="pulsed_push",
+)
 
 # ── Pulse summary ────────────────────────────────────────────────
 with lab_panel("Pulse Summary"):
