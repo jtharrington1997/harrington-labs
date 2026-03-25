@@ -13,3 +13,16 @@ data/references/*
 data/templates/*
 !data/templates/.gitkeep
 .streamlit/secrets.toml
+data/raw/
+data/experimental/
+data/cache/
+data/*.zip
+**/__pycache__/
+
+# Shared local-data/cache ignores
+data/raw/
+data/experimental/
+data/cache/
+data/*.zip
+**/__pycache__/
+__pycache__
