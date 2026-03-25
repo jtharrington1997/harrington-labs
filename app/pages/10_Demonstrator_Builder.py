@@ -23,13 +23,13 @@ from harrington_labs.lmi.ui.formatting import (
 )
 
 st.set_page_config(page_title="Demonstrator Builder", layout="wide")
-render_header("Demonstrator Builder", "Resonator design • QD fiber laser • QD diode + beam combining")
+render_header("Demonstrator Builder", "Resonator design • QD fiber laser • QD diode + beam combining • Modeling & simulation")
 
 db_laser, db_material = source_and_material_sidebar("srcbuild")
 
 from harrington_labs.ui import PLOT_LAYOUT as PLOT_KW
 
-tabs = st.tabs(["Resonator Builder", "QD Fiber Laser", "QD Diode + Beam Combining"])
+tabs = st.tabs(["Resonator Builder", "QD Fiber Laser", "QD Diode + Beam Combining", "Modeling & Simulation"])
 
 # ════════════════════════════════════════════════════════════════════
 # TAB 1: ORIGINAL RESONATOR BUILDER
@@ -556,3 +556,47 @@ with tabs[2]:
         key_prefix="qdd_compare",
     )
     reference_upload_panel(key_prefix="qdd_ref", save_dir="data/references")
+
+# ════════════════════════════════════════════════════════════════════
+# TAB 4: MODELING & SIMULATION
+# ════════════════════════════════════════════════════════════════════
+with tabs[3]:
+    with lab_panel("LMI Workspace"):
+        st.markdown(
+            "The **Modeling & Simulation** workspace provides the full laser-material "
+            "interaction analysis chain: regime classification, beam propagation, "
+            "nonlinear optics, thermal modeling, z-scan, campaign overlays, and "
+            "export / automation."
+        )
+        st.page_link(
+            "pages/9_Modeling_And_Simulation.py",
+            label="Open Modeling & Simulation Workspace",
+            icon=":material/analytics:",
+        )
+
+    with lab_panel("Capabilities"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(
+                "**Beam & Interaction**\n\n"
+                "Regime classification (linear through plasma), "
+                "beam propagation in material, focus analysis, "
+                "open-aperture z-scan, polarization-dependent n2 correction."
+            )
+            st.markdown(
+                "**Thermal & Nonlinear**\n\n"
+                "Steady-state and two-temperature thermal models, "
+                "Kerr self-focusing, self-phase modulation, B-integral, "
+                "critical power for collapse."
+            )
+        with c2:
+            st.markdown(
+                "**Campaign Overlay**\n\n"
+                "Import experimental parameter sweeps from spreadsheets, "
+                "overlay simulation curves against measured data."
+            )
+            st.markdown(
+                "**Export & Automation**\n\n"
+                "Publication-quality plot export (LaTeX/gnuplot/PDF via "
+                "harrington-common reporting), custom model scripting."
+            )

@@ -8,7 +8,7 @@ from harrington_labs.simulation.pulsed_laser import (
 )
 
 st.set_page_config(page_title="Pulsed Laser Lab", layout="wide")
-render_header("Pulsed Laser Lab", "Ultrafast pulses • Temporal & spectral profiles • Dispersion • z-Scan")
+render_header("Pulsed Laser Lab", "Ultrafast pulses • Temporal & spectral profiles • Dispersion • z-Scan • Beam combining")
 
 # ── Sidebar ──────────────────────────────────────────────────────
 from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
@@ -147,6 +147,40 @@ with lab_panel("Open-Aperture z-Scan"):
     fig.update_yaxes(title_text="Normalized Transmission")
     show_figure(fig)
     st.caption(f"Rayleigh range: {zscan['z_rayleigh_mm']:.2f} mm")
+
+# ── Beam combining ───────────────────────────────────────────
+from harrington_labs.simulation.direct_diode import spectral_beam_combining
+
+with lab_panel("Beam Combining"):
+    st.caption("Estimate combined output from multiple pulsed channels via spectral or coherent combining.")
+    combining_mode = st.radio(
+        "Combining Method", ["Spectral (SBC)", "Coherent (CBC)"],
+        horizontal=True, key="pulsed_bc_mode",
+    )
+    c1, c2, c3 = st.columns(3)
+    n_ch = c1.number_input("Channel Count", 2, 100, 4, key="pulsed_bc_n")
+    pe = result.data["pulse_summary"]["pulse_energy_j"]
+    _def_avg = max(1.0, float(round(avg_power, 1)))
+    per_ch_w = c2.number_input("Avg Power per Channel (W)", 1.0, 5000.0, _def_avg, 1.0, key="pulsed_bc_pwr")
+
+    if combining_mode == "Spectral (SBC)":
+        eff = c3.slider("Grating Efficiency", 0.5, 0.99, 0.92, 0.01, key="pulsed_bc_eff")
+        sbc = spectral_beam_combining(n_ch, per_ch_w, eff)
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Raw Avg Power", f"{sbc['raw_power_w']:.1f} W")
+        m2.metric("Combined Avg Power", f"{sbc['combined_power_w']:.1f} W")
+        m3.metric("Combining Efficiency", f"{sbc['combining_efficiency']:.1%}")
+        st.caption("Note: SBC broadens the combined spectrum — individual pulses retain their duration.")
+    else:
+        import math
+        phase_err = c3.slider("Phase Error RMS (rad)", 0.01, 1.0, 0.1, 0.01, key="pulsed_bc_phase")
+        strehl_phase = math.exp(-phase_err**2)
+        combined_avg = n_ch * per_ch_w * strehl_phase
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Raw Avg Power", f"{n_ch * per_ch_w:.1f} W")
+        m2.metric("Combined Avg Power", f"{combined_avg:.1f} W")
+        m3.metric("Strehl (phase)", f"{strehl_phase:.3f}")
+        st.caption("CBC preserves temporal/spectral properties — pulse energy scales with channel count.")
 
 # ── Model Comparison ────────────────────────────────────────────
 from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel

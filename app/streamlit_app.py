@@ -51,37 +51,35 @@ with lab_panel("Research Pipeline"):
     c1, c2, c3 = st.columns(3)
 
     with c1:
-        st.page_link("pages/1_Direct_Diode_Lab.py", label="Direct Diode Lab", icon=":material/laser:")
+        st.page_link("pages/1_Direct_Diode_Lab.py", label="Direct Diode Lab", icon=":material/brightness_7:")
         st.caption("L-I curves, thermal rollover, beam combining")
         st.page_link("pages/2_Fiber_Laser_Lab.py", label="Fiber Laser Lab", icon=":material/cable:")
         st.caption("Gain modeling, nonlinear thresholds, power scaling, beam combining")
-        st.page_link("pages/10_Demonstrator_Builder.py", label="Demonstrator Builder", icon=":material/build:")
-        st.caption("Full-chain laser demonstrator — resonator, QD fiber, QD diode + beam combining")
+        st.page_link("pages/4_Pulsed_Laser_Lab.py", label="Pulsed Laser Lab", icon=":material/electric_bolt:")
+        st.caption("Ultrafast pulses, dispersion, z-scan, beam combining")
 
     with c2:
         st.page_link("pages/3_Beam_Control_Lab.py", label="Beam Control Lab", icon=":material/track_changes:")
         st.caption("Atmospheric propagation, AO, turbulence")
-        st.page_link("pages/4_Pulsed_Laser_Lab.py", label="Pulsed Laser Lab", icon=":material/electric_bolt:")
-        st.caption("Ultrafast pulses, dispersion, z-scan")
         st.page_link("pages/6_Coatings_Lab.py", label="Coatings Lab", icon=":material/layers:")
         st.caption("Thin-film design, spectral/angular response")
+        st.page_link("pages/7_Advanced_Spectroscopy_Lab.py", label="Advanced Spectroscopy Lab", icon=":material/biotech:")
+        st.caption("Raman, Brillouin, DUVRR, LIBS, FTIR, hyperspectral")
 
     with c3:
-        st.page_link("pages/7a_Spectroscopy_Lab.py", label="Spectroscopy Lab", icon=":material/biotech:")
-        st.caption("Raman, Brillouin, DUVRR, LIBS, FTIR, hyperspectral")
         st.page_link("pages/5_Quantum_Dots_Lab.py", label="Quantum Dots Lab", icon=":material/blur_on:")
         st.caption("Size-dependent bandgap, PL, exciton dynamics")
-        st.page_link("pages/9_Modeling_And_Simulation.py", label="Modeling & Simulation", icon=":material/analytics:")
-        st.caption("Beam propagation, nonlinear, thermal, z-scan")
+        st.page_link("pages/10_Demonstrator_Builder.py", label="Demonstrator Builder", icon=":material/build:")
+        st.caption("Full-chain laser demonstrator — resonator, QD fiber, QD diode, modeling & simulation")
 
 # ── Databases & Admin ────────────────────────────────────────────
 with lab_panel("Databases & Tools"):
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.page_link("pages/7_Laser_Library.py", label="Laser Library")
+        st.page_link("pages/8_Laser_Library.py", label="Laser Library")
         st.caption("Commercial lasers, custom sources, OPA chaining")
     with c2:
-        st.page_link("pages/8_Material_Database.py", label="Material Database")
+        st.page_link("pages/9_Material_Database.py", label="Material Database")
         st.caption("Optical, thermal, mechanical properties with Sellmeier dispersion")
     with c3:
         st.page_link("pages/90_Admin.py", label="Admin")

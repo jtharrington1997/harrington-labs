@@ -1,4 +1,4 @@
-"""7a_Spectroscopy_Lab.py — Spectroscopy Lab Simulator."""
+"""7_Advanced_Spectroscopy_Lab.py — Advanced Spectroscopy Lab Simulator."""
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
@@ -18,9 +18,9 @@ from harrington_labs.simulation.spectroscopy import (
     hyperspectral_image,
 )
 
-st.set_page_config(page_title="Spectroscopy Lab", layout="wide")
+st.set_page_config(page_title="Advanced Spectroscopy Lab", layout="wide")
 render_header(
-    "Spectroscopy Lab",
+    "Advanced Spectroscopy Lab",
     "Raman • Brillouin • DUVRR • LIBS • FTIR • Hyperspectral Imaging",
 )
 

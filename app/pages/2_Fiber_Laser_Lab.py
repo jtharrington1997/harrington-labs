@@ -123,7 +123,7 @@ with lab_panel("Spectral Beam Combining"):
     n_channels = c1.number_input("Channel Count", 2, 100, 4, key="fiber_sbc_n")
     per_channel_w = c2.number_input(
         "Power per Channel (W)", 1.0, 5000.0,
-        float(round(amp["signal_out_w"], 1)), 1.0,
+        max(1.0, float(round(amp["signal_out_w"], 1))), 1.0,
         key="fiber_sbc_pwr",
     )
     grating_eff = c3.slider("Grating Efficiency", 0.5, 0.99, 0.92, 0.01, key="fiber_sbc_eff")
