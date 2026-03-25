@@ -120,31 +120,9 @@ def far_field_pattern(
     }
 
 
-# ── Beam combining efficiency ────────────────────────────────────
+# ── Beam combining (re-exported from shared module) ─────────────
 
-def spectral_beam_combining(
-    n_emitters: int = 10,
-    per_emitter_power_w: float = 10.0,
-    grating_efficiency: float = 0.92,
-    pointing_error_urad: float = 50.0,
-    spectral_fill_factor: float = 0.8,
-) -> dict:
-    """Estimate spectral beam combining performance."""
-    raw_power = n_emitters * per_emitter_power_w
-    combining_eff = grating_efficiency * spectral_fill_factor
-    # Pointing loss ~ exp(-theta^2 / theta_diff^2)
-    # Approximate pointing degradation
-    pointing_loss = math.exp(-(pointing_error_urad * 1e-6)**2 / (1e-3)**2)
-    combined_power = raw_power * combining_eff * pointing_loss
-
-    return {
-        "n_emitters": n_emitters,
-        "raw_power_w": raw_power,
-        "combined_power_w": combined_power,
-        "combining_efficiency": combining_eff * pointing_loss,
-        "grating_efficiency": grating_efficiency,
-        "pointing_loss": pointing_loss,
-    }
+from harrington_labs.simulation.beam_combining import spectral_beam_combining  # noqa: F401
 
 
 # ── Full direct-diode simulation bundle ─────────────────────────

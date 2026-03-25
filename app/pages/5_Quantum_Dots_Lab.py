@@ -9,7 +9,10 @@ st.set_page_config(page_title="Quantum Dots Lab", layout="wide")
 render_header("Quantum Dots Lab", "Brus bandgap • PL & absorption spectra • Exciton dynamics • Temperature dependence")
 
 # ── Sidebar ──────────────────────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
 from harrington_labs.ui.db_sidebar import source_and_material_sidebar
+sb = get_shared_beam()
+shared_beam_badge()
 db_laser, db_material = source_and_material_sidebar("qd")
 
 st.sidebar.header("QD Parameters")
@@ -145,6 +148,16 @@ with lab_panel("Temperature-Dependent PL"):
         fig.update_xaxes(title_text="Temperature (K)")
         fig.update_yaxes(title_text="Quantum Yield", range=[0, 1.05])
         show_figure(fig)
+
+# ── Share beam ─────────────────────────────────────────────────
+st.sidebar.markdown("---")
+push_beam_button(
+    wavelength_nm=result.data["peak_emission_nm"],
+    power_w=sb["power_w"],
+    beam_diameter_mm=sb["beam_diameter_mm"],
+    m_squared=sb["m_squared"],
+    key="qd_push",
+)
 
 # ── Model Comparison ────────────────────────────────────────────
 from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel

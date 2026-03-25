@@ -29,7 +29,7 @@ db_laser, db_material = source_and_material_sidebar("srcbuild")
 
 from harrington_labs.ui import PLOT_LAYOUT as PLOT_KW
 
-tabs = st.tabs(["Resonator Builder", "QD Fiber Laser", "QD Diode + Beam Combining", "Modeling & Simulation"])
+tabs = st.tabs(["Resonator Builder", "QD Fiber Laser + Beam Combining", "QD Diode + Beam Combining", "Modeling & Simulation"])
 
 # ════════════════════════════════════════════════════════════════════
 # TAB 1: ORIGINAL RESONATOR BUILDER
@@ -324,6 +324,35 @@ with tabs[1]:
         c1.metric("Quantum Defect", f"{th['quantum_defect']:.1%}")
         c2.metric("Heat Load", f"{th['heat_load_mw']:.1f} mW")
         c3.metric("Heat/Length", f"{th['heat_per_length_mw_m']:.1f} mW/m")
+
+    # ── Beam Combining ──
+    from harrington_labs.simulation.beam_combining import spectral_beam_combining, coherent_beam_combining
+
+    with lab_panel("Beam Combining"):
+        st.caption("Scale QD fiber laser output via spectral or coherent combining of multiple channels.")
+        bc_mode = st.radio(
+            "Combining Method", ["Spectral (SBC)", "Coherent (CBC)"],
+            horizontal=True, key="qdf_bc_mode",
+        )
+        c1, c2, c3 = st.columns(3)
+        n_ch = c1.number_input("Channel Count", 2, 100, 4, key="qdf_bc_n")
+        _qdf_avg_pwr = max(1.0, float(d["output"]["avg_power_mw"]) * 1e-3)
+        per_ch_w = c2.number_input("Avg Power per Channel (W)", 0.001, 5000.0, _qdf_avg_pwr, 0.1, key="qdf_bc_pwr")
+
+        if bc_mode == "Spectral (SBC)":
+            eff = c3.slider("Grating Efficiency", 0.5, 0.99, 0.92, 0.01, key="qdf_bc_eff")
+            sbc = spectral_beam_combining(n_ch, per_ch_w, eff)
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Raw Avg Power", f"{sbc['raw_power_w']:.2f} W")
+            m2.metric("Combined Avg Power", f"{sbc['combined_power_w']:.2f} W")
+            m3.metric("Combining Efficiency", f"{sbc['combining_efficiency']:.1%}")
+        else:
+            phase_err = c3.slider("Phase Error RMS (rad)", 0.01, 1.0, 0.1, 0.01, key="qdf_bc_phase")
+            cbc = coherent_beam_combining(n_ch, per_ch_w, phase_err)
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Total Power", f"{cbc['combined_power_w']:.2f} W")
+            m2.metric("Power in Bucket", f"{cbc['power_in_bucket_w']:.2f} W")
+            m3.metric("Strehl", f"{cbc['strehl_total']:.3f}")
 
     # ── Model Comparison ──
     from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel

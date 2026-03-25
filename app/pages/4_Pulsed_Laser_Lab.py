@@ -149,7 +149,7 @@ with lab_panel("Open-Aperture z-Scan"):
     st.caption(f"Rayleigh range: {zscan['z_rayleigh_mm']:.2f} mm")
 
 # ── Beam combining ───────────────────────────────────────────
-from harrington_labs.simulation.direct_diode import spectral_beam_combining
+from harrington_labs.simulation.beam_combining import spectral_beam_combining
 
 with lab_panel("Beam Combining"):
     st.caption("Estimate combined output from multiple pulsed channels via spectral or coherent combining.")

@@ -21,6 +21,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from harrington_common.compute import jit
 from harrington_labs.domain import SimulationResult, C_M_S, H_J_S, K_B
 
 
@@ -268,6 +269,18 @@ def overlap_factor(core_diameter_um: float, mfd_um: float) -> float:
 # ── Main simulation ────────────────────────────────────────────────────
 
 
+@jit
+def _pump_sweep_kernel(pump_range_mw, coupling_absorbed, slope_efficiency, threshold_pump_w):
+    """Pump sweep output calculation — JIT-accelerated."""
+    n = len(pump_range_mw)
+    output_range_mw = np.empty(n)
+    for i in range(n):
+        p_w = pump_range_mw[i] * 1e-3 * coupling_absorbed
+        out = slope_efficiency * (p_w - threshold_pump_w)
+        output_range_mw[i] = max(0.0, out) * 1e3
+    return output_range_mw
+
+
 def simulate_qd_fiber_laser(params: QDFiberLaserParams) -> SimulationResult:
     """Run the full QD-doped pulsed fiber laser testbed simulation."""
     warnings = []
@@ -413,11 +426,10 @@ def simulate_qd_fiber_laser(params: QDFiberLaserParams) -> SimulationResult:
 
     # ── Pump sweep ──
     pump_range_mw = np.linspace(0, params.pump_power_mw * 2, 200)
-    output_range_mw = np.zeros_like(pump_range_mw)
-    for i, p_mw in enumerate(pump_range_mw):
-        p_w = p_mw * 1e-3 * params.pump_coupling_efficiency * pump_absorbed_fraction
-        out = max(0, slope_efficiency * (p_w - threshold_pump_w))
-        output_range_mw[i] = out * 1e3
+    coupling_absorbed = params.pump_coupling_efficiency * pump_absorbed_fraction
+    output_range_mw = _pump_sweep_kernel(
+        pump_range_mw, coupling_absorbed, slope_efficiency, threshold_pump_w,
+    )
 
     return SimulationResult(
         name="QD-Doped Pulsed Fiber Laser",

@@ -4,7 +4,7 @@ Photonics lab simulators and laser-material interaction (LMI) dissertation platf
 
 All physics engines are JIT-accelerated via `harrington_common.compute` — automatic CUDA GPU → Numba CPU → NumPy fallback.
 
-**~12,800 lines of Python** across 10 simulation engines, 4 LMI engines, and 12 Streamlit pages.
+**~12,800 lines of Python** across 11 simulation engines, 4 LMI engines, and 12 Streamlit pages.
 
 ## Pages
 
@@ -29,15 +29,16 @@ All engines live under `src/harrington_labs/simulation/` with no Streamlit impor
 
 | Engine | JIT | Key Capabilities |
 |--------|-----|------------------|
-| `direct_diode` | Yes | L-I, WPE, junction temperature, far-field, spectral beam combining |
+| `direct_diode` | Yes | L-I, WPE, junction temperature, far-field, beam combining (via shared module) |
 | `fiber_laser` | Yes | `_fiber_propagation_kernel`, SBS/SRS/SPM thresholds, V-number, thermal |
 | `beam_control` | Yes | `_turbulence_broadening_kernel`, Fried r0, Rytov variance, AO correction |
 | `pulsed_laser` | Yes | Temporal/spectral profiles, autocorrelation, GDD scan, open-aperture z-scan |
 | `quantum_dots` | Yes | `_brus_vectorized`, PL spectra, exciton dynamics, Varshni temperature |
 | `coatings` | Yes | TMM via `parallel_map` spectral sweep, angular response, E-field |
-| `spectroscopy` | — | 8 techniques: spontaneous/stimulated Raman & Brillouin, DUVRR, LIBS, FTIR, hyperspectral |
-| `qd_fiber_laser` | — | 8 QD materials (PbS, PbSe, InAs, CdSe, InP, Si, Perovskite), Auger, Q-switch, mode-lock |
-| `qd_diode_combiner` | — | QD active region diodes, SBC/CBC/Hybrid beam combining, Strehl decomposition |
+| `beam_combining` | Yes | `_cbc_far_field_kernel`, SBC + CBC estimators — shared by all source labs |
+| `spectroscopy` | Yes | `_raman_spectrum_kernel`, `_lorentzian_kernel`, `_gaussian_kernel` — 8 techniques |
+| `qd_fiber_laser` | Yes | `_pump_sweep_kernel`, 8 QD materials, Auger, Q-switch, mode-lock |
+| `qd_diode_combiner` | Yes | `_qd_diode_li_kernel`, SBC/CBC/Hybrid beam combining, Strehl decomposition |
 
 ## LMI Platform
 
@@ -57,7 +58,7 @@ Sellmeier dispersion for 10 optical materials (Si, Ge, GaAs, SiO₂, BK7, LiNbO�
 ## Cross-Lab Features
 
 - **Model Comparison** — every lab has a panel to upload experimental data (xlsx, csv, txt) and compare against simulation output with R², RMSE, NRMSE, residual plots. Includes downloadable templates.
-- **Shared Beam State** — configure a source in one lab, carry the parameters to other labs via session state.
+- **Shared Beam State** — configure a source in one lab, carry the parameters to other labs via session state. All 7 lab pages receive shared beam; source labs (Direct Diode, Fiber Laser, Pulsed Laser, Quantum Dots) can push.
 - **Source Database** — 35 light sources with grouped sidebar selector on every page.
 - **Material Database** — 27 materials with sidebar selector on every page.
 - **Beam Combining** — all source labs (Direct Diode, Fiber Laser, Pulsed Laser) include spectral and/or coherent beam combining. Demonstrator Builder adds QD-based SBC/CBC/Hybrid architectures.
@@ -69,7 +70,7 @@ The Demonstrator Builder (page 10) hosts four design tools:
 
 **Resonator Builder** — first-pass estimate for bulk/slab gain media (Nd:YAG, Ti:Sapph, Yb:YAG, Er:Glass, etc.) with pump architecture, cavity FSR, slope efficiency, and threshold.
 
-**QD Fiber Laser** — quantum-dot-doped fiber laser with 8 QD materials (PbS, PbSe, InAs, CdSe, InP, Si, Perovskite). Empirical sizing curves, Auger recombination, single/multi-exciton gain, Q-switched and mode-locked operation.
+**QD Fiber Laser + Beam Combining** — quantum-dot-doped fiber laser with 8 QD materials (PbS, PbSe, InAs, CdSe, InP, Si, Perovskite). Empirical sizing curves, Auger recombination, single/multi-exciton gain, Q-switched and mode-locked operation. SBC and CBC combining of multiple QD fiber channels.
 
 **QD Diode + Beam Combining** — QD active region diode array with three beam combining architectures:
 - Spectral Beam Combining (SBC): diffraction grating, gain-bandwidth-limited channels, spectral fill
@@ -82,7 +83,7 @@ The Demonstrator Builder (page 10) hosts four design tools:
 
 | Module | Purpose |
 |--------|---------|
-| `src/harrington_labs/simulation/` | 10 physics engines for labs + testbeds (no Streamlit imports) |
+| `src/harrington_labs/simulation/` | 11 physics engines for labs + testbeds (no Streamlit imports) |
 | `src/harrington_labs/lmi/simulation/` | 4 LMI engines: beam propagation, nonlinear, thermal, custom models |
 | `src/harrington_labs/lmi/domain/` | 35 laser sources, 27 materials, regime classification, plot specs |
 | `src/harrington_labs/comparison/` | Model-vs-experiment framework: metrics, parsers, templates, UI |

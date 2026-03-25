@@ -9,7 +9,7 @@ st.set_page_config(page_title="Fiber Laser Lab", layout="wide")
 render_header("Fiber Laser Lab", "Gain modeling • Nonlinear limits • Thermal analysis • Mode properties • Beam combining")
 
 # ── Sidebar inputs ───────────────────────────────────────────────
-from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
+from harrington_labs.ui.shared_state import get_shared_beam, push_beam_button, shared_beam_badge
 from harrington_labs.ui.db_sidebar import source_and_material_sidebar
 sb = get_shared_beam()
 shared_beam_badge()
@@ -34,6 +34,14 @@ st.sidebar.header("Doping")
 dopant = st.sidebar.selectbox("Dopant", ["Yb", "Er", "Tm", "Ho"])
 doping = st.sidebar.number_input("Doping (ppm)", 100, 50000, 1000, 100)
 bg_loss = st.sidebar.number_input("Background Loss (dB/m)", 0.0, 0.1, 0.005, 0.001, format="%.3f")
+st.sidebar.markdown("---")
+push_beam_button(
+    wavelength_nm=sig_wl,
+    power_w=pump_pwr,
+    beam_diameter_mm=sb["beam_diameter_mm"],
+    m_squared=sb["m_squared"],
+    key="fiber_push",
+)
 
 params = FiberLaserParams(
     fiber_type=FiberType(fiber_type),
@@ -115,7 +123,7 @@ with col2:
         c3.metric("Heat Load/m", f"{th['linear_heat_load_w_m']:.1f} W/m")
 
 # ── Beam combining ───────────────────────────────────────────
-from harrington_labs.simulation.direct_diode import spectral_beam_combining
+from harrington_labs.simulation.beam_combining import spectral_beam_combining
 
 with lab_panel("Spectral Beam Combining"):
     st.caption("Estimate combined output from multiple fiber amplifier channels through a diffraction grating.")

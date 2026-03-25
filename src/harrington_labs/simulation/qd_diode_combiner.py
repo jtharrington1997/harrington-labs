@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from harrington_common.compute import jit
 from harrington_labs.domain import SimulationResult, C_M_S, H_J_S, K_B
 
 # Reuse QD sizing from the fiber laser engine
@@ -89,6 +90,37 @@ class QDDiodeCombinerParams:
 # ── Single QD emitter physics ─────────────────────────────────────────
 
 
+@jit
+def _qd_diode_li_kernel(
+    current, n_points, i_th, eta_slope_w_a, t0_k, thermal_resistance_k_w,
+    v_photon, t_hs,
+):
+    """L-I curve with thermal convergence — JIT-accelerated."""
+    power = np.zeros(n_points)
+    voltage = np.zeros(n_points)
+    junction_temp = np.zeros(n_points)
+    efficiency = np.zeros(n_points)
+    for i in range(n_points):
+        I = current[i]
+        t_j = t_hs
+        p_out = 0.0
+        v_diode = v_photon + 0.4
+        for _ in range(5):
+            i_th_t = i_th * math.exp((t_j - t_hs) / t0_k)
+            eta_s_t = eta_slope_w_a * math.exp(-(t_j - t_hs) / (t0_k * 3))
+            p_out = max(0.0, eta_s_t * (I - i_th_t)) if I > i_th_t else 0.0
+            r_s = 0.02
+            v_diode = v_photon + 0.4 + r_s * I
+            p_elec = v_diode * I
+            p_diss = max(p_elec - p_out, 0.0)
+            t_j = t_hs + p_diss * thermal_resistance_k_w
+        power[i] = p_out
+        voltage[i] = v_diode
+        junction_temp[i] = t_j - 273.15
+        efficiency[i] = power[i] / (voltage[i] * I) if I > 0.0 else 0.0
+    return power, voltage, junction_temp, efficiency
+
+
 def qd_diode_li(params: QDDiodeCombinerParams, n_points: int = 200) -> dict:
     """Compute L-I curve for a single QD diode emitter.
 
@@ -137,28 +169,12 @@ def qd_diode_li(params: QDDiodeCombinerParams, n_points: int = 200) -> dict:
     # T0 for QDs is typically higher than QW (less thermal sensitivity)
     t_hs = params.heatsink_temp_c + 273.15
     current = np.linspace(0, params.operating_current_a * 2, n_points)
-    power = np.zeros(n_points)
-    voltage = np.zeros(n_points)
-    junction_temp = np.zeros(n_points)
-    efficiency = np.zeros(n_points)
 
     v_photon = photon_energy_ev
-    for i, I in enumerate(current):
-        t_j = t_hs
-        for _ in range(5):
-            i_th_t = i_th * math.exp((t_j - t_hs) / params.t0_k)
-            eta_s_t = eta_slope_w_a * math.exp(-(t_j - t_hs) / (params.t0_k * 3))
-            p_out = max(0, eta_s_t * (I - i_th_t)) if I > i_th_t else 0.0
-            r_s = 0.02
-            v_diode = v_photon + 0.4 + r_s * I
-            p_elec = v_diode * I
-            p_diss = max(p_elec - p_out, 0)
-            t_j = t_hs + p_diss * params.thermal_resistance_k_w
-
-        power[i] = p_out
-        voltage[i] = v_diode
-        junction_temp[i] = t_j - 273.15
-        efficiency[i] = power[i] / (voltage[i] * I) if I > 0 else 0.0
+    power, voltage, junction_temp, efficiency = _qd_diode_li_kernel(
+        current, n_points, i_th, eta_slope_w_a, params.t0_k,
+        params.thermal_resistance_k_w, v_photon, t_hs,
+    )
 
     # Single emitter output at operating current
     idx_op = np.searchsorted(current, params.operating_current_a)
@@ -322,15 +338,15 @@ def coherent_beam_combine(
     theta = np.linspace(-theta_max, theta_max, n_ff)  # µrad
     theta_rad = theta * 1e-6
 
-    # Array factor for tiled aperture
+    # Array factor via JIT kernel
     pitch_m = emitter_pitch_um * 1e-6
     k = 2 * math.pi / (emission_nm * 1e-9)
-    array_factor = np.zeros(n_ff)
-    for j in range(n_emitters):
-        x_j = (j - (n_emitters - 1) / 2) * pitch_m
-        phase_err = np.random.default_rng(42 + j).normal(0, phase_error_rms_rad)
-        array_factor += np.cos(k * x_j * np.sin(theta_rad) + phase_err)
-    array_factor = (array_factor / n_emitters)**2
+    phase_errors = np.array([
+        np.random.default_rng(42 + j).normal(0, phase_error_rms_rad)
+        for j in range(n_emitters)
+    ])
+    from harrington_labs.simulation.beam_combining import _cbc_far_field_kernel
+    array_factor = _cbc_far_field_kernel(theta_rad, n_emitters, pitch_m, k, phase_errors)
 
     # Single element envelope
     w_emitter = emitter_pitch_um * 1e-6 * math.sqrt(fill_factor) / 2

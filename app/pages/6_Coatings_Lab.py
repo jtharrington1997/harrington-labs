@@ -15,14 +15,17 @@ st.set_page_config(page_title="Coatings Lab", layout="wide")
 render_header("Coatings Lab", "Transfer matrix • Spectral/angular response • E-field • GDD")
 
 # ── Sidebar: preset or custom ────────────────────────────────────
+from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
 from harrington_labs.ui.db_sidebar import source_and_material_sidebar
+sb = get_shared_beam()
+shared_beam_badge()
 db_laser, db_material = source_and_material_sidebar("coat")
 
 st.sidebar.header("Coating Design")
 design_mode = st.sidebar.radio("Mode", ["Preset Design", "Custom Stack"])
 
 substrate = st.sidebar.selectbox("Substrate", [s.value for s in SubstrateType])
-_def_design_wl = db_laser.wavelength_nm if db_laser else 1064.0
+_def_design_wl = db_laser.wavelength_nm if db_laser else sb["wavelength_nm"]
 design_wl = st.sidebar.number_input("Design Wavelength (nm)", 200.0, 12000.0, _def_design_wl, 1.0)
 aoi = st.sidebar.number_input("Angle of Incidence (°)", 0.0, 85.0, 0.0, 1.0)
 

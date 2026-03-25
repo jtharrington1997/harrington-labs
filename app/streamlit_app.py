@@ -88,7 +88,7 @@ with lab_panel("Databases & Tools"):
 # ── Footer ───────────────────────────────────────────────────────
 st.markdown("---")
 st.caption(
-    "Harrington Labs v1.3.0 • "
+    "Harrington Labs v1.4.0 • "
     "Photonics Lab Simulators + Laser-Material Interaction • "
     "Built with Streamlit"
 )

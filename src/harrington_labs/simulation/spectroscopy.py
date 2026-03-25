@@ -9,6 +9,7 @@ from __future__ import annotations
 import math
 import numpy as np
 
+from harrington_common.compute import jit, parallel_map
 from harrington_labs.domain import SimulationResult, C_M_S, H_J_S, K_B
 from harrington_labs.domain.spectroscopy import (
     RamanParams, BrillouinParams, DUVRRParams,
@@ -21,6 +22,49 @@ from harrington_labs.domain.spectroscopy import (
 _EV_TO_CM_INV = 8065.544  # 1 eV in cm⁻¹
 
 
+# ── JIT-accelerated lineshape kernels ──────────────────────────────────
+
+
+@jit
+def _lorentzian_kernel(x, n, center, gamma, amplitude):
+    """Lorentzian lineshape — JIT-accelerated."""
+    out = np.empty(n)
+    g2 = gamma * gamma
+    for i in range(n):
+        dx = x[i] - center
+        out[i] = amplitude * g2 / (dx * dx + g2)
+    return out
+
+
+@jit
+def _gaussian_kernel(x, n, center, sigma, amplitude):
+    """Gaussian lineshape — JIT-accelerated."""
+    out = np.empty(n)
+    inv2s2 = 1.0 / (2.0 * sigma * sigma)
+    for i in range(n):
+        dx = x[i] - center
+        out[i] = amplitude * math.exp(-dx * dx * inv2s2)
+    return out
+
+
+@jit
+def _raman_spectrum_kernel(
+    shifts, n_points, n_modes,
+    mode_positions, mode_widths, mode_amplitudes,
+):
+    """Multi-peak Lorentzian Raman spectrum — JIT-accelerated."""
+    spectrum = np.zeros(n_points)
+    for m in range(n_modes):
+        center = mode_positions[m]
+        gamma = mode_widths[m] / 2.0
+        amp = mode_amplitudes[m]
+        g2 = gamma * gamma
+        for i in range(n_points):
+            dx = shifts[i] - center
+            spectrum[i] += amp * g2 / (dx * dx + g2)
+    return spectrum
+
+
 def _wavenumber_to_wavelength_nm(excitation_nm: float, shift_cm_inv: float) -> float:
     """Convert Raman shift (cm⁻¹) to scattered wavelength (nm)."""
     exc_cm_inv = 1e7 / excitation_nm
@@ -30,12 +74,12 @@ def _wavenumber_to_wavelength_nm(excitation_nm: float, shift_cm_inv: float) -> f
 
 def _lorentzian(x: np.ndarray, center: float, fwhm: float, amplitude: float) -> np.ndarray:
     gamma = fwhm / 2.0
-    return amplitude * gamma**2 / ((x - center)**2 + gamma**2)
+    return _lorentzian_kernel(x, len(x), center, gamma, amplitude)
 
 
 def _gaussian(x: np.ndarray, center: float, fwhm: float, amplitude: float) -> np.ndarray:
     sigma = fwhm / (2.0 * math.sqrt(2.0 * math.log(2.0)))
-    return amplitude * np.exp(-((x - center)**2) / (2.0 * sigma**2))
+    return _gaussian_kernel(x, len(x), center, sigma, amplitude)
 
 
 def _voigt_approx(x: np.ndarray, center: float, fwhm_g: float, fwhm_l: float, amplitude: float) -> np.ndarray:
@@ -73,22 +117,35 @@ def spontaneous_raman(params: RamanParams, n_points: int = 1024) -> dict:
     exc_wl = params.excitation_wavelength_nm
     exc_nu = 1e7 / exc_wl  # cm⁻¹
 
-    # Build spectrum from defined modes
-    spectrum = np.zeros(n_points)
-    for pos, width, rel_int in zip(params.raman_shifts_cm_inv, params.raman_widths_cm_inv, params.raman_intensities):
-        # Stokes line
+    # Build spectrum from defined modes — precompute amplitudes, then JIT kernel
+    n_modes = len(params.raman_shifts_cm_inv)
+    stokes_positions = np.array(params.raman_shifts_cm_inv, dtype=np.float64)
+    stokes_widths = np.array(params.raman_widths_cm_inv, dtype=np.float64)
+    stokes_amps = np.empty(n_modes)
+    anti_stokes_positions = np.empty(n_modes)
+    anti_stokes_widths = np.empty(n_modes)
+    anti_stokes_amps = np.empty(n_modes)
+
+    for m in range(n_modes):
+        pos = stokes_positions[m]
         thermal = _bose_einstein(pos, params.temperature_k)
         scattered_nu = exc_nu - pos
-        nu4_factor = (scattered_nu / exc_nu)**4 if exc_nu > 0 else 1.0
-        amp = rel_int * thermal * nu4_factor * params.laser_power_mw * params.integration_time_s
-        spectrum += _lorentzian(shifts, pos, width, amp)
+        nu4_factor = (scattered_nu / exc_nu) ** 4 if exc_nu > 0 else 1.0
+        stokes_amps[m] = params.raman_intensities[m] * thermal * nu4_factor * params.laser_power_mw * params.integration_time_s
 
-        # Anti-Stokes (weaker)
-        if params.temperature_k > 0:
-            as_thermal = math.exp(-pos * 100 * H_J_S * C_M_S / (K_B * params.temperature_k)) if pos > 0 else 0
+        anti_stokes_positions[m] = -pos
+        anti_stokes_widths[m] = stokes_widths[m]
+        if params.temperature_k > 0 and pos > 0:
+            as_thermal = math.exp(-pos * 100 * H_J_S * C_M_S / (K_B * params.temperature_k))
             as_scattered_nu = exc_nu + pos
-            as_nu4 = (as_scattered_nu / exc_nu)**4 if exc_nu > 0 else 1.0
-            spectrum += _lorentzian(shifts, -pos, width, rel_int * as_thermal * as_nu4 * params.laser_power_mw * params.integration_time_s)
+            as_nu4 = (as_scattered_nu / exc_nu) ** 4 if exc_nu > 0 else 1.0
+            anti_stokes_amps[m] = params.raman_intensities[m] * as_thermal * as_nu4 * params.laser_power_mw * params.integration_time_s
+        else:
+            anti_stokes_amps[m] = 0.0
+
+    # JIT kernel: sum all Stokes + anti-Stokes peaks
+    spectrum = _raman_spectrum_kernel(shifts, n_points, n_modes, stokes_positions, stokes_widths, stokes_amps)
+    spectrum += _raman_spectrum_kernel(shifts, n_points, n_modes, anti_stokes_positions, anti_stokes_widths, anti_stokes_amps)
 
     # Fluorescence background (broad hump)
     bg_center = 1500.0
