@@ -25,12 +25,12 @@ with lab_panel("Platform Status"):
         from harrington_labs.lmi.domain.materials import all_materials
         lasers = all_lasers()
         materials = all_materials()
-        cols[0].metric("Lab Simulators", "6")
+        cols[0].metric("Lab Simulators", "7")
         cols[1].metric("LMI Engines", "4")
         cols[2].metric("Lasers in DB", len(lasers))
         cols[3].metric("Materials in DB", len(materials))
     except Exception:
-        cols[0].metric("Lab Simulators", "6")
+        cols[0].metric("Lab Simulators", "7")
         cols[1].metric("LMI Engines", "4")
         cols[2].metric("Lasers in DB", "—")
         cols[3].metric("Materials in DB", "—")
@@ -71,12 +71,12 @@ with lab_panel("Research Pipeline"):
 
     with c3:
         st.markdown("#### 3. Light-Matter Interaction")
+        st.page_link("pages/7a_Spectroscopy_Lab.py", label="Spectroscopy Lab", icon="🔬")
+        st.caption("Raman, Brillouin, DUVRR, LIBS, FTIR, hyperspectral")
         st.page_link("pages/5_Quantum_Dots_Lab.py", label="Quantum Dots Lab", icon="⚛️")
         st.caption("Size-dependent bandgap, PL, exciton dynamics")
         st.page_link("pages/9_Modeling_And_Simulation.py", label="Modeling & Simulation", icon="📊")
         st.caption("Beam propagation, nonlinear, thermal, z-scan")
-        st.page_link("pages/7_Laser_Library.py", label="Laser Library", icon="📚")
-        st.caption("Browse sources & materials for LMI studies")
 
 # ── Databases & Admin ────────────────────────────────────────────
 with lab_panel("Databases & Tools"):
