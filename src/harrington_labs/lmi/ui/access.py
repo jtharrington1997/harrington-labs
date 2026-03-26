@@ -5,7 +5,7 @@ from pathlib import Path
 import streamlit as st
 
 _ACCESS_FILE = Path("data/manual/access.json")
-_DEFAULT_HASH = hashlib.sha256("REDACTED_DEFAULT_PASSWORD".encode()).hexdigest()
+_DEFAULT_HASH = hashlib.sha256("changeme".encode()).hexdigest()
 
 
 def _load_access() -> dict:

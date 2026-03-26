@@ -26,3 +26,6 @@ data/cache/
 data/*.zip
 **/__pycache__/
 __pycache__
+
+# Secrets — admin hash (portable via Syncthing, never committed)
+data/manual/access.json
