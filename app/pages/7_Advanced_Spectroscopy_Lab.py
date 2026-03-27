@@ -1,22 +1,35 @@
-"""7_Advanced_Spectroscopy_Lab.py — Advanced Spectroscopy Lab Simulator."""
-import numpy as np
-import streamlit as st
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
-from harrington_labs.ui import render_header, lab_panel, make_figure, show_figure, warning_box, COLORS
-from harrington_labs.domain import SimulationResult
+"""7_Advanced_Spectroscopy_Lab.py — Advanced Spectroscopy Lab Simulator."""
+from __future__ import annotations
+
+import numpy as np
+import plotly.graph_objects as go
+import streamlit as st
+
+from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
 from harrington_labs.domain.spectroscopy import (
-    RamanParams, BrillouinParams, DUVRRParams,
-    LIBSParams, FTIRParams, HyperspectralParams,
-    SamplePhase, RamanExcitation,
+    BrillouinParams,
+    DUVRRParams,
+    FTIRParams,
+    HyperspectralParams,
+    LIBSParams,
+    RamanExcitation,
+    RamanParams,
+    SamplePhase,
 )
 from harrington_labs.simulation.spectroscopy import (
-    spontaneous_raman, stimulated_raman,
-    spontaneous_brillouin, stimulated_brillouin,
-    duvrr_spectrum, libs_spectrum, ftir_spectrum,
+    duvrr_spectrum,
+    ftir_spectrum,
     hyperspectral_image,
+    libs_spectrum,
+    spontaneous_brillouin,
+    spontaneous_raman,
+    stimulated_brillouin,
+    stimulated_raman,
 )
+from harrington_labs.ui import COLORS, lab_panel, make_figure, render_header, show_figure
+from harrington_labs.ui.db_sidebar import source_and_material_sidebar
+from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
 
 st.set_page_config(page_title="Advanced Spectroscopy Lab", layout="wide")
 render_header(
@@ -25,21 +38,224 @@ render_header(
 )
 
 # ── Database access ──────────────────────────────────────────────
-from harrington_labs.ui.shared_state import get_shared_beam, shared_beam_badge
-from harrington_labs.ui.db_sidebar import source_and_material_sidebar
 sb = get_shared_beam()
 shared_beam_badge()
 db_laser, db_material = source_and_material_sidebar("spectro")
 
+# ── Shared preset tables ─────────────────────────────────────────
+_RAMAN_PRESETS = {
+    "Silicon (520 cm⁻¹)": ([520.0], [8.0], [1.0]),
+    "Diamond (1332 cm⁻¹)": ([1332.0], [3.5], [1.0]),
+    "Fused Silica": ([440.0, 490.0, 800.0, 1060.0], [40.0, 30.0, 50.0, 60.0], [0.7, 0.3, 0.5, 0.4]),
+    "Polystyrene": (
+        [621.0, 1001.0, 1031.0, 1155.0, 1450.0, 1583.0, 1602.0, 2852.0, 2904.0, 3054.0],
+        [12.0, 6.0, 10.0, 8.0, 15.0, 8.0, 6.0, 20.0, 15.0, 25.0],
+        [0.3, 1.0, 0.7, 0.2, 0.3, 0.4, 0.8, 0.3, 0.4, 0.6],
+    ),
+    "Calcite (CaCO₃)": ([156.0, 282.0, 712.0, 1086.0, 1436.0], [10.0, 8.0, 12.0, 5.0, 15.0], [0.3, 0.5, 0.4, 1.0, 0.15]),
+    "Water": ([1640.0, 3250.0, 3450.0], [80.0, 200.0, 200.0], [0.3, 0.7, 1.0]),
+}
+_RAMAN_PRESET_OPTIONS = [
+    "Silicon (520 cm⁻¹)",
+    "Diamond (1332 cm⁻¹)",
+    "Fused Silica",
+    "Polystyrene",
+    "Calcite (CaCO₃)",
+    "Water",
+    "Custom",
+]
+_RAMAN_MATERIAL_DEFAULTS = {
+    "Silicon (Si)": "Silicon (520 cm⁻¹)",
+    "Diamond (C)": "Diamond (1332 cm⁻¹)",
+    "Fused Silica (SiO2)": "Fused Silica",
+    "BK7 Glass": "Fused Silica",
+    "Sapphire (Al2O3)": "Fused Silica",
+    "CaF2 (Calcium Fluoride)": "Fused Silica",
+    "BaF2": "Fused Silica",
+    "MgF2": "Fused Silica",
+    "LiNbO3 (Lithium Niobate)": "Fused Silica",
+    "KTP": "Fused Silica",
+    "PMMA (Acrylic)": "Polystyrene",
+    "Polycarbonate (PC)": "Polystyrene",
+    "PDMS (Silicone)": "Polystyrene",
+    "Water": "Water",
+    "Skin Tissue (Dermis)": "Water",
+    "Cornea": "Water",
+}
+
+_LIBS_COMPOSITIONS = {
+    "Stainless Steel 304": {"Fe": 0.70, "Cr": 0.18, "Ni": 0.08, "Mn": 0.02, "Si": 0.01, "C": 0.01},
+    "Aluminum 6061": {"Al": 0.97, "Mg": 0.01, "Si": 0.006, "Cu": 0.003, "Fe": 0.007, "Mn": 0.001, "Cr": 0.002, "Ti": 0.001},
+    "Copper Alloy": {"Cu": 0.88, "Si": 0.04, "Mn": 0.02, "Fe": 0.03, "Ni": 0.02, "Al": 0.01},
+    "Soil / Environmental": {"Si": 0.30, "Al": 0.08, "Fe": 0.05, "Ca": 0.04, "Mg": 0.02, "Na": 0.01, "Ti": 0.005, "Mn": 0.001},
+}
+_LIBS_PRESET_OPTIONS = ["Stainless Steel 304", "Aluminum 6061", "Copper Alloy", "Soil / Environmental", "Custom"]
+_LIBS_MATERIAL_DEFAULTS = {
+    "Stainless Steel 304": "Stainless Steel 304",
+    "Aluminum (Al)": "Aluminum 6061",
+    "Copper (Cu)": "Copper Alloy",
+}
+
+_FTIR_PRESETS = {
+    "Polymer Film (generic)": [(3400, 200, 0.8), (2920, 30, 0.6), (2850, 25, 0.4), (1740, 20, 0.9), (1460, 15, 0.3), (1050, 40, 0.7)],
+    "Protein (Amide bands)": [(3300, 250, 0.6), (2960, 30, 0.3), (1650, 30, 1.0), (1540, 30, 0.8), (1300, 25, 0.4), (1100, 40, 0.3)],
+    "Silicone": [(2960, 25, 0.5), (1260, 15, 1.0), (1090, 60, 0.9), (1020, 40, 0.8), (800, 20, 0.7)],
+}
+_FTIR_PRESET_OPTIONS = ["Polymer Film (generic)", "Protein (Amide bands)", "Silicone", "Custom"]
+_FTIR_MATERIAL_DEFAULTS = {
+    "PMMA (Acrylic)": "Polymer Film (generic)",
+    "Polycarbonate (PC)": "Polymer Film (generic)",
+    "PDMS (Silicone)": "Silicone",
+    "Water": "Protein (Amide bands)",
+    "Skin Tissue (Dermis)": "Protein (Amide bands)",
+    "Cornea": "Protein (Amide bands)",
+    "Bone (Cortical)": "Protein (Amide bands)",
+    "Dental Enamel": "Protein (Amide bands)",
+}
+
+
+def _clamp(value: float, lower: float, upper: float) -> float:
+    return max(lower, min(upper, float(value)))
+
+
+def _sync_widget_state(driver_key: str, driver_value: str, widget_key: str, widget_value) -> None:
+    if st.session_state.get(driver_key) != driver_value:
+        st.session_state[driver_key] = driver_value
+        st.session_state[widget_key] = widget_value
+
+
+def _material_name() -> str:
+    return db_material.name if db_material else ""
+
+
+def _laser_name() -> str:
+    return db_laser.name if db_laser else ""
+
+
+def _material_default(mapping: dict[str, str], fallback: str) -> str:
+    return mapping.get(_material_name(), fallback)
+
+
+def _safe_power_input(
+    label: str,
+    *,
+    min_value: float,
+    max_value: float,
+    manual_default: float,
+    key: str,
+    db_power_w: float | None = None,
+    step: float = 1.0,
+    unit_scale: float = 1.0,
+    unit_label: str = "",
+    format: str | None = None,
+) -> float:
+    source_name = _laser_name() or "manual"
+    if db_power_w is not None:
+        default_value = _clamp(db_power_w * unit_scale, min_value, max_value)
+        _sync_widget_state(f"{key}__driver", source_name, key, default_value)
+        requested = db_power_w * unit_scale
+        if abs(requested - default_value) > 1e-9:
+            st.sidebar.caption(
+                f"{source_name} power exceeds the {unit_label} control range; using {default_value:.3g} {unit_label}."
+            )
+    elif key not in st.session_state:
+        st.session_state[key] = manual_default
+
+    kwargs = {}
+    if format is not None:
+        kwargs["format"] = format
+
+    return float(
+        st.sidebar.number_input(
+            label,
+            min_value=min_value,
+            max_value=max_value,
+            step=step,
+            key=key,
+            **kwargs,
+        )
+    )
+
+
+
+def _safe_wavelength_input(
+    label: str,
+    *,
+    min_nm: float,
+    max_nm: float,
+    manual_default_nm: float,
+    key: str,
+    db_source=None,
+    step: float = 1.0,
+) -> float:
+    source_name = db_source.name if db_source else "manual"
+    driver_key = f"{key}__driver"
+    select_key = f"{key}__select"
+    input_key = f"{key}__input"
+
+    if db_source and db_source.emission_lines_nm:
+        candidate_lines = sorted({float(line) for line in db_source.emission_lines_nm if min_nm <= float(line) <= max_nm})
+        if candidate_lines:
+            default_line = min(candidate_lines, key=lambda line: abs(line - _clamp(db_source.wavelength_nm, min_nm, max_nm)))
+            _sync_widget_state(driver_key, source_name, select_key, default_line)
+            st.sidebar.caption(f"{db_source.name}: selecting from in-range emission lines.")
+            return float(st.sidebar.selectbox(label, candidate_lines, key=select_key))
+
+    if db_source is not None:
+        default_nm = _clamp(db_source.wavelength_nm, min_nm, max_nm)
+        _sync_widget_state(driver_key, source_name, input_key, default_nm)
+        if abs(db_source.wavelength_nm - default_nm) > 1e-9:
+            st.sidebar.caption(
+                f"{db_source.name} is outside {min_nm:.0f}–{max_nm:.0f} nm for this model; using {default_nm:.1f} nm."
+            )
+    elif input_key not in st.session_state:
+        st.session_state[input_key] = manual_default_nm
+
+    return float(
+        st.sidebar.number_input(
+            label,
+            min_value=min_nm,
+            max_value=max_nm,
+            step=step,
+            key=input_key,
+        )
+    )
+
+
+def _manual_raman_peaks() -> tuple[list[float], list[float], list[float]]:
+    n_peaks = int(st.sidebar.number_input("Number of peaks", 1, 10, 1, key="raman_npeaks"))
+    shifts: list[float] = []
+    widths: list[float] = []
+    intensities: list[float] = []
+    for i in range(n_peaks):
+        shifts.append(st.sidebar.number_input(f"Peak {i+1} position (cm⁻¹)", 50.0, 4000.0, 520.0, 1.0, key=f"raman_s{i}"))
+        widths.append(st.sidebar.number_input(f"Peak {i+1} FWHM (cm⁻¹)", 1.0, 200.0, 8.0, 1.0, key=f"raman_w{i}"))
+        intensities.append(st.sidebar.number_input(f"Peak {i+1} intensity", 0.01, 10.0, 1.0, 0.1, key=f"raman_a{i}"))
+    return shifts, widths, intensities
+
+
+def _resolve_raman_preset() -> str:
+    default_preset = _material_default(_RAMAN_MATERIAL_DEFAULTS, "Silicon (520 cm⁻¹)")
+    _sync_widget_state("raman_preset__driver", _material_name() or "manual", "raman_preset", default_preset)
+    return st.sidebar.selectbox("Material Preset", _RAMAN_PRESET_OPTIONS, key="raman_preset")
+
+
+def _resolve_libs_preset() -> str:
+    default_preset = _material_default(_LIBS_MATERIAL_DEFAULTS, "Stainless Steel 304")
+    _sync_widget_state("libs_preset__driver", _material_name() or "manual", "libs_preset", default_preset)
+    return st.sidebar.selectbox("Material", _LIBS_PRESET_OPTIONS, key="libs_preset")
+
+
+def _resolve_ftir_preset() -> str:
+    default_preset = _material_default(_FTIR_MATERIAL_DEFAULTS, "Polymer Film (generic)")
+    _sync_widget_state("ftir_preset__driver", _material_name() or "manual", "ftir_preset", default_preset)
+    return st.sidebar.selectbox("Material", _FTIR_PRESET_OPTIONS, key="ftir_preset")
+
+
 # ── Technique selector ──────────────────────────────────────────────
-tabs = st.tabs([
-    "Raman",
-    "Brillouin",
-    "DUVRR",
-    "LIBS",
-    "FTIR",
-    "Hyperspectral",
-])
+tabs = st.tabs(
+    ["Raman", "Brillouin", "DUVRR", "LIBS", "FTIR", "Hyperspectral"]
+)
 
 # ════════════════════════════════════════════════════════════════════
 # TAB 1: RAMAN (Spontaneous + Stimulated)
@@ -48,53 +264,42 @@ with tabs[0]:
     st.sidebar.header("Raman Parameters")
     raman_mode = st.sidebar.radio("Mode", ["Spontaneous", "Stimulated (SRS)"], key="raman_mode")
 
-    exc_wl_options = {e.value: float(e.value.replace(" nm", "")) for e in RamanExcitation}
-    exc_sel = st.sidebar.selectbox("Excitation Wavelength", list(exc_wl_options.keys()), index=4, key="raman_exc")
-    exc_wl = exc_wl_options[exc_sel]
-    if db_laser:
-        exc_wl = db_laser.wavelength_nm  # override with database source
+    if db_laser is None:
+        exc_wl_options = {e.value: float(e.value.replace(" nm", "")) for e in RamanExcitation}
+        exc_sel = st.sidebar.selectbox("Excitation Wavelength", list(exc_wl_options.keys()), index=4, key="raman_exc_manual")
+        exc_wl = exc_wl_options[exc_sel]
+    else:
+        exc_wl = _safe_wavelength_input(
+            "Excitation Wavelength (nm)",
+            min_nm=244.0,
+            max_nm=1064.0,
+            manual_default_nm=532.0,
+            key="raman_exc_db",
+            db_source=db_laser,
+        )
 
-    raman_power = st.sidebar.number_input("Laser Power (mW)", 0.1, 1000.0, db_laser.power_w * 1e3 if db_laser else 50.0, 1.0, key="raman_pwr")
+    raman_power = _safe_power_input(
+        "Laser Power (mW)",
+        min_value=0.1,
+        max_value=1000.0,
+        manual_default=50.0,
+        key="raman_pwr",
+        db_power_w=db_laser.power_w if db_laser else None,
+        step=1.0,
+        unit_scale=1e3,
+        unit_label="mW",
+    )
     raman_int_time = st.sidebar.number_input("Integration Time (s)", 0.01, 300.0, 1.0, 0.1, key="raman_int")
     raman_na = st.sidebar.number_input("Objective NA", 0.1, 1.4, 0.75, 0.05, key="raman_na")
     raman_res = st.sidebar.number_input("Spectral Resolution (cm⁻¹)", 0.5, 20.0, 4.0, 0.5, key="raman_res")
     raman_temp = st.sidebar.number_input("Temperature (K)", 4.0, 1000.0, 293.0, 10.0, key="raman_temp")
     raman_phase = st.sidebar.selectbox("Sample Phase", [p.value for p in SamplePhase], key="raman_phase")
 
-    # Material preset
-    raman_preset = st.sidebar.selectbox("Material Preset", [
-        "Silicon (520 cm⁻¹)",
-        "Diamond (1332 cm⁻¹)",
-        "Fused Silica",
-        "Polystyrene",
-        "Calcite (CaCO₃)",
-        "Water",
-        "Custom",
-    ], key="raman_preset")
-
-    _RAMAN_PRESETS = {
-        "Silicon (520 cm⁻¹)": ([520.0], [8.0], [1.0]),
-        "Diamond (1332 cm⁻¹)": ([1332.0], [3.5], [1.0]),
-        "Fused Silica": ([440.0, 490.0, 800.0, 1060.0], [40.0, 30.0, 50.0, 60.0], [0.7, 0.3, 0.5, 0.4]),
-        "Polystyrene": ([621.0, 1001.0, 1031.0, 1155.0, 1450.0, 1583.0, 1602.0, 2852.0, 2904.0, 3054.0],
-                        [12.0, 6.0, 10.0, 8.0, 15.0, 8.0, 6.0, 20.0, 15.0, 25.0],
-                        [0.3, 1.0, 0.7, 0.2, 0.3, 0.4, 0.8, 0.3, 0.4, 0.6]),
-        "Calcite (CaCO₃)": ([156.0, 282.0, 712.0, 1086.0, 1436.0], [10.0, 8.0, 12.0, 5.0, 15.0], [0.3, 0.5, 0.4, 1.0, 0.15]),
-        "Water": ([1640.0, 3250.0, 3450.0], [80.0, 200.0, 200.0], [0.3, 0.7, 1.0]),
-    }
-
+    raman_preset = _resolve_raman_preset()
     if raman_preset != "Custom" and raman_preset in _RAMAN_PRESETS:
         shifts, widths, intensities = _RAMAN_PRESETS[raman_preset]
     else:
-        n_peaks = st.sidebar.number_input("Number of peaks", 1, 10, 1, key="raman_npeaks")
-        shifts, widths, intensities = [], [], []
-        for i in range(int(n_peaks)):
-            s = st.sidebar.number_input(f"Peak {i+1} position (cm⁻¹)", 50.0, 4000.0, 520.0, 1.0, key=f"raman_s{i}")
-            w = st.sidebar.number_input(f"Peak {i+1} FWHM (cm⁻¹)", 1.0, 200.0, 8.0, 1.0, key=f"raman_w{i}")
-            a = st.sidebar.number_input(f"Peak {i+1} intensity", 0.01, 10.0, 1.0, 0.1, key=f"raman_a{i}")
-            shifts.append(s)
-            widths.append(w)
-            intensities.append(a)
+        shifts, widths, intensities = _manual_raman_peaks()
 
     raman_params = RamanParams(
         excitation_wavelength_nm=exc_wl,
@@ -114,14 +319,8 @@ with tabs[0]:
 
         with lab_panel("Spontaneous Raman Spectrum"):
             fig = make_figure(f"Raman Spectrum — λ_exc = {exc_wl:.0f} nm")
-            fig.add_trace(go.Scatter(
-                x=data["shift_cm_inv"], y=data["spectrum"],
-                name="Measured", line=dict(color=COLORS[0], width=1.5),
-            ))
-            fig.add_trace(go.Scatter(
-                x=data["shift_cm_inv"], y=data["background"],
-                name="Background", line=dict(color=COLORS[3], width=1, dash="dash"),
-            ))
+            fig.add_trace(go.Scatter(x=data["shift_cm_inv"], y=data["spectrum"], name="Measured", line=dict(color=COLORS[0], width=1.5)))
+            fig.add_trace(go.Scatter(x=data["shift_cm_inv"], y=data["background"], name="Background", line=dict(color=COLORS[3], width=1, dash="dash")))
             fig.update_xaxes(title_text="Raman Shift (cm⁻¹)")
             fig.update_yaxes(title_text="Intensity (a.u.)")
             show_figure(fig)
@@ -129,7 +328,7 @@ with tabs[0]:
         col1, col2 = st.columns(2)
         with col1:
             with lab_panel("Peak Table"):
-                for i, (s, w, a) in enumerate(zip(shifts, widths, intensities)):
+                for s, w, _a in zip(shifts, widths, intensities):
                     wl_s = 1e7 / (1e7 / exc_wl - s)
                     st.caption(f"**{s:.1f} cm⁻¹** — FWHM: {w:.1f} cm⁻¹, λ_Stokes: {wl_s:.1f} nm")
 
@@ -140,22 +339,17 @@ with tabs[0]:
                     st.caption(f"Sample temperature: {raman_temp:.0f} K")
                 else:
                     st.caption("No peaks defined for S/AS analysis.")
-
-    else:  # SRS
+    else:
         srs_pump = st.sidebar.number_input("Pump Power (mW)", 1.0, 5000.0, 100.0, 10.0, key="srs_pump")
         srs_seed = st.sidebar.number_input("Stokes Seed (mW)", 0.001, 10.0, 0.01, 0.001, key="srs_seed", format="%.3f")
         srs_length = st.sidebar.number_input("Interaction Length (m)", 0.01, 100.0, 1.0, 0.1, key="srs_len")
         raman_params.pump_power_mw = srs_pump
         raman_params.stokes_seed_power_mw = srs_seed
-
         data = stimulated_raman(raman_params, fiber_length_m=srs_length)
 
         with lab_panel("SRS Gain Spectrum"):
             fig = make_figure("Stimulated Raman Gain")
-            fig.add_trace(go.Scatter(
-                x=data["shift_cm_inv"], y=data["stokes_gain"],
-                name="Stokes Gain", line=dict(color=COLORS[0], width=2.5),
-            ))
+            fig.add_trace(go.Scatter(x=data["shift_cm_inv"], y=data["stokes_gain"], name="Stokes Gain", line=dict(color=COLORS[0], width=2.5)))
             fig.update_xaxes(title_text="Raman Shift (cm⁻¹)")
             fig.update_yaxes(title_text="Gain Factor", type="log")
             show_figure(fig)
@@ -166,13 +360,16 @@ with tabs[0]:
             c2.metric("Max Stokes Power", f"{float(np.max(data['stokes_power_mw'])):.2f} mW")
             c3.metric("Pump Remaining", f"{data['pump_remaining_fraction']:.1%}")
 
-    # Model comparison
-    from harrington_labs.comparison.ui import model_comparison_panel, reference_upload_panel
     if raman_mode == "Spontaneous":
         model_comparison_panel(
-            sim_x=data["shift_cm_inv"], sim_y=data["spectrum"],
-            x_label="Raman Shift", y_label="Intensity", x_unit="cm⁻¹", y_unit="a.u.",
-            panel_title="Model Comparison — Raman", key_prefix="raman_compare",
+            sim_x=data["shift_cm_inv"],
+            sim_y=data["spectrum"],
+            x_label="Raman Shift",
+            y_label="Intensity",
+            x_unit="cm⁻¹",
+            y_unit="a.u.",
+            panel_title="Model Comparison — Raman",
+            key_prefix="raman_compare",
         )
 
 # ════════════════════════════════════════════════════════════════════
@@ -181,20 +378,40 @@ with tabs[0]:
 with tabs[1]:
     st.sidebar.header("Brillouin Parameters")
     brill_mode = st.sidebar.radio("Mode", ["Spontaneous", "Stimulated (SBS)"], key="brill_mode")
-    brill_wl = st.sidebar.number_input("Wavelength (nm)", 400.0, 1600.0, db_laser.wavelength_nm if db_laser else 532.0, 1.0, key="brill_wl")
-    brill_power = st.sidebar.number_input("Power (mW)", 1.0, 5000.0, db_laser.power_w * 1e3 if db_laser else 100.0, 10.0, key="brill_pwr")
+    brill_wl = _safe_wavelength_input(
+        "Wavelength (nm)",
+        min_nm=400.0,
+        max_nm=1600.0,
+        manual_default_nm=532.0,
+        key="brill_wl",
+        db_source=db_laser,
+    )
+    brill_power = _safe_power_input(
+        "Power (mW)",
+        min_value=1.0,
+        max_value=5000.0,
+        manual_default=100.0,
+        key="brill_pwr",
+        db_power_w=db_laser.power_w if db_laser else None,
+        step=10.0,
+        unit_scale=1e3,
+        unit_label="mW",
+    )
     brill_angle = st.sidebar.number_input("Scattering Angle (°)", 1.0, 180.0, 180.0, 1.0, key="brill_angle")
     brill_v = st.sidebar.number_input("Sound Velocity (m/s)", 100.0, 20000.0, 5960.0, 10.0, key="brill_v")
-    _def_n = db_material.refractive_index if db_material and db_material.refractive_index > 0 else 1.46
-    _def_rho = db_material.density_kg_m3 if db_material and db_material.density_kg_m3 > 0 else 2200.0
-    brill_n = st.sidebar.number_input("Refractive Index", 1.0, 4.0, _def_n, 0.01, key="brill_n")
-    brill_rho = st.sidebar.number_input("Density (kg/m³)", 500.0, 20000.0, _def_rho, 100.0, key="brill_rho")
+    default_n = db_material.refractive_index if db_material and db_material.refractive_index > 0 else 1.46
+    default_rho = db_material.density_kg_m3 if db_material and db_material.density_kg_m3 > 0 else 2200.0
+    brill_n = st.sidebar.number_input("Refractive Index", 1.0, 4.0, float(default_n), 0.01, key="brill_n")
+    brill_rho = st.sidebar.number_input("Density (kg/m³)", 500.0, 20000.0, float(default_rho), 100.0, key="brill_rho")
     brill_alpha = st.sidebar.number_input("Acoustic Atten. (dB/cm/GHz²)", 0.01, 10.0, 0.5, 0.1, key="brill_alpha")
 
     brill_params = BrillouinParams(
-        excitation_wavelength_nm=brill_wl, laser_power_mw=brill_power,
-        scattering_angle_deg=brill_angle, sound_velocity_m_s=brill_v,
-        refractive_index=brill_n, density_kg_m3=brill_rho,
+        excitation_wavelength_nm=brill_wl,
+        laser_power_mw=brill_power,
+        scattering_angle_deg=brill_angle,
+        sound_velocity_m_s=brill_v,
+        refractive_index=brill_n,
+        density_kg_m3=brill_rho,
         acoustic_attenuation_db_cm_ghz2=brill_alpha,
     )
 
@@ -216,23 +433,22 @@ with tabs[1]:
             c2.metric("Linewidth", f"{data_b['linewidth_ghz']:.3f} GHz")
             c3.metric("M (Long.)", f"{data_b['longitudinal_modulus_gpa']:.1f} GPa")
             c4.metric("v_s", f"{data_b['sound_velocity_m_s']:.0f} m/s")
-
-    else:  # SBS
+    else:
         brill_fiber_d = st.sidebar.number_input("Fiber Core (µm)", 1.0, 100.0, 8.0, 1.0, key="sbs_core")
         brill_length = st.sidebar.number_input("Fiber Length (m)", 0.1, 1000.0, 10.0, 1.0, key="sbs_len")
         brill_params.fiber_core_diameter_um = brill_fiber_d
         brill_params.interaction_length_m = brill_length
-
         data_sbs = stimulated_brillouin(brill_params)
 
         with lab_panel("SBS Threshold & Reflectivity"):
             fig = make_figure("SBS Reflectivity vs Input Power")
-            fig.add_trace(go.Scatter(
-                x=data_sbs["input_power_mw"], y=data_sbs["sbs_reflectivity"],
-                name="Reflectivity", line=dict(color=COLORS[1], width=2.5),
-            ))
-            fig.add_vline(x=data_sbs["threshold_power_mw"], line_dash="dot", line_color=COLORS[0],
-                          annotation_text=f"Threshold: {data_sbs['threshold_power_mw']:.1f} mW")
+            fig.add_trace(go.Scatter(x=data_sbs["input_power_mw"], y=data_sbs["sbs_reflectivity"], name="Reflectivity", line=dict(color=COLORS[1], width=2.5)))
+            fig.add_vline(
+                x=data_sbs["threshold_power_mw"],
+                line_dash="dot",
+                line_color=COLORS[0],
+                annotation_text=f"Threshold: {data_sbs['threshold_power_mw']:.1f} mW",
+            )
             fig.update_xaxes(title_text="Input Power (mW)")
             fig.update_yaxes(title_text="Backward Reflectivity", type="log")
             show_figure(fig)
@@ -249,17 +465,37 @@ with tabs[1]:
 # ════════════════════════════════════════════════════════════════════
 with tabs[2]:
     st.sidebar.header("DUVRR Parameters")
-    duvrr_wl = st.sidebar.number_input("Excitation λ (nm)", 190.0, 270.0, 244.0, 1.0, key="duvrr_wl")
-    duvrr_power = st.sidebar.number_input("Power (µW)", 1.0, 5000.0, 500.0, 10.0, key="duvrr_pwr")
+    duvrr_wl = _safe_wavelength_input(
+        "Excitation λ (nm)",
+        min_nm=190.0,
+        max_nm=270.0,
+        manual_default_nm=244.0,
+        key="duvrr_wl",
+        db_source=db_laser,
+    )
+    duvrr_power = _safe_power_input(
+        "Power (µW)",
+        min_value=1.0,
+        max_value=5000.0,
+        manual_default=500.0,
+        key="duvrr_pwr",
+        db_power_w=db_laser.power_w if db_laser else None,
+        step=10.0,
+        unit_scale=1e6,
+        unit_label="µW",
+    )
     duvrr_int = st.sidebar.number_input("Integration (s)", 1.0, 600.0, 60.0, 10.0, key="duvrr_int")
     duvrr_conc = st.sidebar.number_input("Concentration (mg/mL)", 0.1, 100.0, 10.0, 1.0, key="duvrr_conc")
     duvrr_trans = st.sidebar.number_input("Electronic Transition (nm)", 200.0, 300.0, 260.0, 1.0, key="duvrr_trans")
     duvrr_enh = st.sidebar.number_input("Enhancement Factor", 1e2, 1e7, 1e4, 100.0, format="%.0e", key="duvrr_enh")
 
     duvrr_params = DUVRRParams(
-        excitation_wavelength_nm=duvrr_wl, laser_power_uw=duvrr_power,
-        integration_time_s=duvrr_int, concentration_mg_ml=duvrr_conc,
-        electronic_transition_nm=duvrr_trans, resonance_enhancement_factor=duvrr_enh,
+        excitation_wavelength_nm=duvrr_wl,
+        laser_power_uw=duvrr_power,
+        integration_time_s=duvrr_int,
+        concentration_mg_ml=duvrr_conc,
+        electronic_transition_nm=duvrr_trans,
+        resonance_enhancement_factor=duvrr_enh,
     )
     data_d = duvrr_spectrum(duvrr_params)
 
@@ -267,8 +503,14 @@ with tabs[2]:
         fig = make_figure(f"Deep-UV Resonance Raman — λ = {duvrr_wl:.0f} nm")
         fig.add_trace(go.Scatter(x=data_d["shift_cm_inv"], y=data_d["spectrum"], name="DUVRR", line=dict(color=COLORS[4], width=1.5)))
         for mode in data_d["mode_assignments"]:
-            fig.add_vline(x=mode["position"], line_dash="dot", line_color="gray", line_width=0.5,
-                          annotation_text=mode["label"], annotation_font_size=9)
+            fig.add_vline(
+                x=mode["position"],
+                line_dash="dot",
+                line_color="gray",
+                line_width=0.5,
+                annotation_text=mode["label"],
+                annotation_font_size=9,
+            )
         fig.update_xaxes(title_text="Raman Shift (cm⁻¹)")
         fig.update_yaxes(title_text="Intensity (a.u.)")
         show_figure(fig)
@@ -277,8 +519,7 @@ with tabs[2]:
     with col1:
         with lab_panel("Excitation Profile"):
             fig2 = make_figure("Resonance Enhancement vs λ")
-            fig2.add_trace(go.Scatter(x=data_d["excitation_profile_nm"], y=data_d["excitation_profile"],
-                                       name="Enhancement", line=dict(color=COLORS[1], width=2)))
+            fig2.add_trace(go.Scatter(x=data_d["excitation_profile_nm"], y=data_d["excitation_profile"], name="Enhancement", line=dict(color=COLORS[1], width=2)))
             fig2.add_vline(x=duvrr_wl, line_dash="dot", line_color=COLORS[0], annotation_text="λ_exc")
             fig2.update_xaxes(title_text="Excitation Wavelength (nm)")
             fig2.update_yaxes(title_text="Relative Enhancement")
@@ -286,13 +527,17 @@ with tabs[2]:
     with col2:
         with lab_panel("Mode Assignments"):
             st.metric("Resonance Enhancement", f"{data_d['resonance_enhancement']:.2e}×")
-            for m in data_d["mode_assignments"]:
-                st.caption(f"**{m['label']}** — {m['position']:.0f} cm⁻¹ (rel. int. {m['intensity']:.2f})")
+            for mode in data_d["mode_assignments"]:
+                st.caption(f"**{mode['label']}** — {mode['position']:.0f} cm⁻¹ (rel. int. {mode['intensity']:.2f})")
 
     model_comparison_panel(
-        sim_x=data_d["shift_cm_inv"], sim_y=data_d["spectrum"],
-        x_label="Raman Shift", y_label="Intensity", x_unit="cm⁻¹",
-        panel_title="Model Comparison — DUVRR", key_prefix="duvrr_compare",
+        sim_x=data_d["shift_cm_inv"],
+        sim_y=data_d["spectrum"],
+        x_label="Raman Shift",
+        y_label="Intensity",
+        x_unit="cm⁻¹",
+        panel_title="Model Comparison — DUVRR",
+        key_prefix="duvrr_compare",
     )
 
 # ════════════════════════════════════════════════════════════════════
@@ -305,31 +550,16 @@ with tabs[3]:
     libs_spot = st.sidebar.number_input("Spot Diameter (µm)", 10.0, 1000.0, 100.0, 10.0, key="libs_spot")
     libs_delay = st.sidebar.number_input("Gate Delay (µs)", 0.01, 100.0, 1.0, 0.1, key="libs_delay")
     libs_gate = st.sidebar.number_input("Gate Width (µs)", 0.1, 100.0, 10.0, 1.0, key="libs_gate")
-
-    libs_preset = st.sidebar.selectbox("Material", [
-        "Stainless Steel 304",
-        "Aluminum 6061",
-        "Copper Alloy",
-        "Soil / Environmental",
-        "Custom",
-    ], key="libs_preset")
-
-    _LIBS_COMPOSITIONS = {
-        "Stainless Steel 304": {"Fe": 0.70, "Cr": 0.18, "Ni": 0.08, "Mn": 0.02, "Si": 0.01, "C": 0.01},
-        "Aluminum 6061": {"Al": 0.97, "Mg": 0.01, "Si": 0.006, "Cu": 0.003, "Fe": 0.007, "Mn": 0.001, "Cr": 0.002, "Ti": 0.001},
-        "Copper Alloy": {"Cu": 0.88, "Si": 0.04, "Mn": 0.02, "Fe": 0.03, "Ni": 0.02, "Al": 0.01},
-        "Soil / Environmental": {"Si": 0.30, "Al": 0.08, "Fe": 0.05, "Ca": 0.04, "Mg": 0.02, "Na": 0.01, "Ti": 0.005, "Mn": 0.001},
-    }
-
-    if libs_preset in _LIBS_COMPOSITIONS:
-        composition = _LIBS_COMPOSITIONS[libs_preset]
-    else:
-        composition = {"Fe": 0.5, "Cr": 0.2, "Ni": 0.1}
+    libs_preset = _resolve_libs_preset()
+    composition = _LIBS_COMPOSITIONS.get(libs_preset, {"Fe": 0.5, "Cr": 0.2, "Ni": 0.1})
 
     libs_params = LIBSParams(
-        pulse_energy_mj=libs_energy, pulse_width_ns=libs_pulse_ns,
-        spot_diameter_um=libs_spot, gate_delay_us=libs_delay,
-        gate_width_us=libs_gate, composition=composition,
+        pulse_energy_mj=libs_energy,
+        pulse_width_ns=libs_pulse_ns,
+        spot_diameter_um=libs_spot,
+        gate_delay_us=libs_delay,
+        gate_width_us=libs_gate,
+        composition=composition,
     )
     data_l = libs_spectrum(libs_params)
 
@@ -352,9 +582,13 @@ with tabs[3]:
                 st.caption(f"**{line['element']}** {line['wavelength_nm']:.1f} nm — E_upper: {line['upper_ev']:.1f} eV")
 
     model_comparison_panel(
-        sim_x=data_l["wavelength_nm"], sim_y=data_l["spectrum"],
-        x_label="Wavelength", y_label="Intensity", x_unit="nm",
-        panel_title="Model Comparison — LIBS", key_prefix="libs_compare",
+        sim_x=data_l["wavelength_nm"],
+        sim_y=data_l["spectrum"],
+        x_label="Wavelength",
+        y_label="Intensity",
+        x_unit="nm",
+        panel_title="Model Comparison — LIBS",
+        key_prefix="libs_compare",
     )
 
 # ════════════════════════════════════════════════════════════════════
@@ -367,29 +601,16 @@ with tabs[4]:
     ftir_thick = st.sidebar.number_input("Sample Thickness (µm)", 0.1, 1000.0, 10.0, 1.0, key="ftir_thick")
     ftir_wn_min = st.sidebar.number_input("Min Wavenumber (cm⁻¹)", 200.0, 2000.0, 400.0, 50.0, key="ftir_wn_min")
     ftir_wn_max = st.sidebar.number_input("Max Wavenumber (cm⁻¹)", 2000.0, 6000.0, 4000.0, 100.0, key="ftir_wn_max")
-
-    ftir_preset = st.sidebar.selectbox("Material", [
-        "Polymer Film (generic)",
-        "Protein (Amide bands)",
-        "Silicone",
-        "Custom",
-    ], key="ftir_preset")
-
-    _FTIR_PRESETS = {
-        "Polymer Film (generic)": [(3400, 200, 0.8), (2920, 30, 0.6), (2850, 25, 0.4), (1740, 20, 0.9), (1460, 15, 0.3), (1050, 40, 0.7)],
-        "Protein (Amide bands)": [(3300, 250, 0.6), (2960, 30, 0.3), (1650, 30, 1.0), (1540, 30, 0.8), (1300, 25, 0.4), (1100, 40, 0.3)],
-        "Silicone": [(2960, 25, 0.5), (1260, 15, 1.0), (1090, 60, 0.9), (1020, 40, 0.8), (800, 20, 0.7)],
-    }
-
-    if ftir_preset in _FTIR_PRESETS:
-        ir_modes = _FTIR_PRESETS[ftir_preset]
-    else:
-        ir_modes = [(1740, 20, 0.9)]
+    ftir_preset = _resolve_ftir_preset()
+    ir_modes = _FTIR_PRESETS.get(ftir_preset, [(1740, 20, 0.9)])
 
     ftir_params = FTIRParams(
-        wavenumber_min_cm_inv=ftir_wn_min, wavenumber_max_cm_inv=ftir_wn_max,
-        resolution_cm_inv=ftir_res, n_scans=int(ftir_scans),
-        thickness_um=ftir_thick, ir_modes=ir_modes,
+        wavenumber_min_cm_inv=ftir_wn_min,
+        wavenumber_max_cm_inv=ftir_wn_max,
+        resolution_cm_inv=ftir_res,
+        n_scans=int(ftir_scans),
+        thickness_um=ftir_thick,
+        ir_modes=ir_modes,
     )
     data_f = ftir_spectrum(ftir_params)
 
@@ -411,9 +632,13 @@ with tabs[4]:
         st.caption(f"Resolution: {ftir_res} cm⁻¹ | Scans: {ftir_scans} | Thickness: {ftir_thick} µm")
 
     model_comparison_panel(
-        sim_x=data_f["wavenumber_cm_inv"], sim_y=data_f["absorbance"],
-        x_label="Wavenumber", y_label="Absorbance", x_unit="cm⁻¹",
-        panel_title="Model Comparison — FTIR", key_prefix="ftir_compare",
+        sim_x=data_f["wavenumber_cm_inv"],
+        sim_y=data_f["absorbance"],
+        x_label="Wavenumber",
+        y_label="Absorbance",
+        x_unit="cm⁻¹",
+        panel_title="Model Comparison — FTIR",
+        key_prefix="ftir_compare",
     )
 
 # ════════════════════════════════════════════════════════════════════
@@ -428,8 +653,10 @@ with tabs[5]:
     hyper_nc = st.sidebar.number_input("Components", 2, 6, 3, key="hyper_nc")
 
     hyper_params = HyperspectralParams(
-        image_size_px=int(hyper_size), pixel_size_um=hyper_px,
-        pixel_dwell_time_ms=hyper_dwell, snr_db=hyper_snr,
+        image_size_px=int(hyper_size),
+        pixel_size_um=hyper_px,
+        pixel_dwell_time_ms=hyper_dwell,
+        snr_db=hyper_snr,
         n_components=int(hyper_nc),
     )
     data_h = hyperspectral_image(hyper_params)
@@ -437,11 +664,7 @@ with tabs[5]:
     with lab_panel("Hyperspectral Image"):
         fov = hyper_size * hyper_px
         fig = make_figure(f"Integrated Intensity — {fov:.0f}×{fov:.0f} µm FOV")
-        fig.add_trace(go.Heatmap(
-            z=data_h["intensity_image"],
-            colorscale="Viridis",
-            colorbar=dict(title="Intensity"),
-        ))
+        fig.add_trace(go.Heatmap(z=data_h["intensity_image"], colorscale="Viridis", colorbar=dict(title="Intensity")))
         fig.update_xaxes(title_text=f"x (pixels, {hyper_px} µm/px)")
         fig.update_yaxes(title_text=f"y (pixels, {hyper_px} µm/px)")
         fig.update_layout(yaxis_scaleanchor="x")
@@ -459,13 +682,9 @@ with tabs[5]:
         with lab_panel("Component Spectra"):
             fig_s = make_figure("Component Reference Spectra")
             for i, (spec, name) in enumerate(zip(data_h["component_spectra"], data_h["component_names"])):
-                fig_s.add_trace(go.Scatter(
-                    x=data_h["wavenumber_cm_inv"], y=spec,
-                    name=name, line=dict(color=COLORS[i % len(COLORS)], width=2),
-                ))
+                fig_s.add_trace(go.Scatter(x=data_h["wavenumber_cm_inv"], y=spec, name=name, line=dict(color=COLORS[i % len(COLORS)], width=2)))
             fig_s.update_xaxes(title_text="Wavenumber (cm⁻¹)")
             fig_s.update_yaxes(title_text="Intensity (a.u.)")
             show_figure(fig_s)
 
-# ── Reference Library (shared) ──────────────────────────────────────
 reference_upload_panel(key_prefix="spectro_ref", save_dir="data/references")
