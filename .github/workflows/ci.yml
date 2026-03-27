@@ -1,0 +1,43 @@
+name: Harrington Labs CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  spectroscopy-stress:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out harrington-labs
+        uses: actions/checkout@v4
+        with:
+          path: harrington-labs
+
+      - name: Check out harrington-common
+        uses: actions/checkout@v4
+        with:
+          repository: jtharrington1997/harrington-common
+          path: harrington-common
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./harrington-common
+          python -m pip install -e ./harrington-labs[dev]
+
+      - name: Compile source tree
+        working-directory: harrington-labs
+        run: |
+          python -m compileall src app tools tests
+
+      - name: Run spectroscopy stress tests
+        working-directory: harrington-labs
+        run: |
+          pytest -q tests/stress tests/security
