@@ -1,0 +1,46 @@
+name: Harrington Labs Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 10 * * 1'
+
+jobs:
+  security-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out harrington-labs
+        uses: actions/checkout@v4
+        with:
+          path: harrington-labs
+
+      - name: Check out harrington-common
+        uses: actions/checkout@v4
+        with:
+          repository: jtharrington1997/harrington-common
+          path: harrington-common
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ./harrington-common
+          python -m pip install -e ./harrington-labs[dev]
+          python -m pip install pip-audit
+
+      - name: Run repo hardening tests
+        working-directory: harrington-labs
+        run: |
+          pytest -q tests/security
+
+      - name: Audit dependencies
+        working-directory: harrington-labs
+        run: |
+          pip-audit
